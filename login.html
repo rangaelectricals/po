@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    <script src="main.js"></script>
 </head>
 <body class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);">
     <!-- Animated background blobs -->
@@ -84,42 +85,6 @@
     </div>
 
     <script>
-      var API_URL = 'https://script.google.com/macros/s/AKfycbx4V3wD2cM8dF2tz0mD2DJUFyJLLAfji-7yHJKNuqNHLZP30ylkmBJG_gB3serhxNg/exec';
-
-      // Fetch users: try API first, then users.json fallback
-      function fetchUsers() {
-        return fetch(API_URL + '?action=read_users', { redirect: 'follow' })
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            var users = Array.isArray(data) ? data : (data.users || []);
-            if (users.length > 0) return users;
-            // API returned empty — seed from users.json
-            return seedFromJSON();
-          })
-          .catch(function() {
-            // API not available — fall back to users.json
-            return fetch('users.json').then(function(r) { return r.json(); }).catch(function() {
-              return [{ username: 'ranga', password: 'Ranga@7677', role: 'admin' }];
-            });
-          });
-      }
-
-      function seedFromJSON() {
-        return fetch('users.json').then(function(r) { return r.json(); }).then(function(users) {
-          if (users.length > 0) {
-            // Seed API with default users
-            return fetch(API_URL, {
-              method: 'POST', redirect: 'follow',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ action: 'save_users', users: users })
-            }).then(function() { return users; }).catch(function() { return users; });
-          }
-          return [{ username: 'ranga', password: 'Ranga@7677', role: 'admin' }];
-        }).catch(function() {
-          return [{ username: 'ranga', password: 'Ranga@7677', role: 'admin' }];
-        });
-      }
-
       // Check if already logged in
       function checkExistingSession() {
         var session = JSON.parse(localStorage.getItem('po_session') || 'null');
@@ -159,7 +124,7 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Signing in...';
 
-        fetchUsers().then(function(users) {
+        fetchAppUsers('').then(function(users) {
           var user = users.find(function(u) { return u.username.toLowerCase() === username; });
 
           if (!user || user.password !== password) {
