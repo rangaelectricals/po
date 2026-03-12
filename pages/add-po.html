@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add PO - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+    <!-- jsPDF + autoTable for live PDF preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="../seal.js"></script>
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Header -->
+        <div class="w-full navbar modern-navbar sticky top-0 z-30 px-4">
+          <div class="flex-none">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2 text-xl font-bold text-primary">Create Purchase Order</div>
+        </div>
+        <!-- Main Content -->
+        <div class="p-4 md:p-6 w-full">
+          <!-- Toggle preview button (mobile) -->
+          <div class="flex justify-end mb-2 lg:hidden">
+            <button type="button" class="btn btn-sm btn-outline btn-primary gap-1" onclick="togglePreviewPanel()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              Toggle Preview
+            </button>
+          </div>
+          <div class="flex flex-col lg:flex-row gap-4 items-start">
+            <!-- LEFT: Form -->
+            <div class="w-full lg:w-1/2 lg:min-w-[420px] flex-shrink-0">
+          <div class="card bg-base-100 shadow border border-base-300 compact-form">
+            <div class="card-body">
+              <form id="poForm">
+                <input type="hidden" name="po_id" id="po_id">
+                <!-- SECTION 1: PO Details -->
+                <div class="section-badge"><span class="badge-num">1</span> PO Details</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">PO Number</span></label>
+                    <div class="relative">
+                      <input type="text" name="po_no" id="po_no" class="input input-bordered w-full pr-10 font-mono tracking-wide" placeholder="Auto-generating..." readonly required>
+                      <span id="poNoStatus" class="absolute right-2 top-1/2 -translate-y-1/2">
+                        <span class="loading loading-spinner loading-xs text-primary"></span>
+                      </span>
+                    </div>
+                    <label class="label pt-0"><span class="label-text-alt text-base-content/50">Auto-generated &mdash; Format: <span class="font-mono text-primary/80">RE/EO/001</span></span></label>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">PO Date</span></label>
+                    <input type="date" name="po_date" id="po_date" class="input input-bordered w-full" required>
+                  </div>
+                </div>
+                <!-- SECTION 2: Vendor Details -->
+                <div class="section-badge"><span class="badge-num">2</span> Vendor Details</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Vendor Name</span></label>
+                    <div class="vendor-input-row">
+                      <div class="vendor-dropdown-wrap" id="vendorDropdownWrap">
+                        <input type="text" name="vendor_name" id="vendor_name" class="input input-bordered w-full vendor-dd-input" autocomplete="off" placeholder="Search or type vendor name..." required>
+                        <div class="vendor-dd-list" id="vendorDDList"></div>
+                      </div>
+                      <button type="button" class="btn btn-primary btn-square vendor-quick-add-btn" title="Quick add new vendor" onclick="quickAddVendorFromInput()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Vendor GSTIN</span></label>
+                    <input type="text" name="vendor_gstin" id="vendor_gstin" class="input input-bordered w-full" placeholder="e.g. 33AAHCR4037J1ZD">
+                  </div>
+                  <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text font-medium">Vendor Address</span></label>
+                    <textarea name="vendor_address" id="vendor_address" class="textarea textarea-bordered w-full" rows="2" placeholder="Vendor full address"></textarea>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Client Name</span></label>
+                    <input type="text" name="client_name" id="client_name" class="input input-bordered w-full" placeholder="e.g. M/s. RC ELECTRICALS">
+                  </div>
+                </div>
+                <!-- SECTION 3: Event & Client -->
+                <div class="section-badge"><span class="badge-num">3</span> Event &amp; Client</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Event Name</span></label>
+                    <input type="text" name="event_name" id="event_name" class="input input-bordered w-full" placeholder="Event name">
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Event Location</span></label>
+                    <input type="text" name="event_location" id="event_location" class="input input-bordered w-full" placeholder="Event location" required>
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Event Date</span></label>
+                    <input type="text" name="event_date" id="event_date" class="input input-bordered w-full" placeholder="e.g. 23-02-2026 TO 01-03-2026 (8DAYS)" required>
+                  </div>
+                </div>
+
+                <!-- SECTION 4: Line Items -->
+                <div class="section-badge"><span class="badge-num">4</span> Line Items</div>
+
+                <!-- Items Table -->
+                <div class="po-items-tip">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <strong>Master</strong> items auto-fill rate &amp; UOM from your Item Master &mdash; <strong>Custom</strong> for free-text entry. Drag <svg xmlns="http://www.w3.org/2000/svg" class="inline h-3 w-3" viewBox="0 0 10 16" fill="currentColor"><circle cx="3" cy="5" r="1.2"/><circle cx="7" cy="5" r="1.2"/><circle cx="3" cy="11" r="1.2"/><circle cx="7" cy="11" r="1.2"/></svg> to reorder rows.
+                </div>
+                <div id="poItemsTable" class="mb-4"></div>
+                <input type="hidden" name="items" id="items">
+
+                <!-- SECTION 5: Charges & Terms -->
+                <div class="section-badge"><span class="badge-num">5</span> Charges &amp; Terms</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Transport Charges</span></label>
+                    <input type="number" name="transport" id="transport" class="input input-bordered w-full" value="0" min="0">
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">CGST %</span></label>
+                    <input type="number" name="cgst_percent" id="cgst_percent" class="input input-bordered w-full" value="0" min="0" max="100" step="0.5">
+                  </div>
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">SGST %</span></label>
+                    <input type="number" name="sgst_percent" id="sgst_percent" class="input input-bordered w-full" value="0" min="0" max="100" step="0.5">
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div class="form-control">
+                    <label class="label"><span class="label-text font-medium">Terms of Payment</span></label>
+                    <input type="text" name="terms" id="terms" class="input input-bordered w-full" value="60 DAYS FROM THE DATE OF SUPPLY">
+                  </div>
+                </div>
+
+                <div class="mt-5 rounded-xl border border-base-300 bg-base-100 shadow-sm overflow-hidden">
+                  <!-- Tax breakdown -->
+                  <div class="px-4 py-3 border-b border-base-200 bg-base-50">
+                    <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-base-content/60">
+                      <span id="poSubtotalLine"></span>
+                      <span id="poCgstLine"></span>
+                      <span id="poSgstLine"></span>
+                    </div>
+                  </div>
+                  <!-- Grand total + actions -->
+                  <div class="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <div class="text-xs font-semibold uppercase tracking-widest text-base-content/40 mb-0.5">Grand Total</div>
+                      <div class="text-3xl font-black text-primary font-mono tracking-tight">&#8377;<span id="poGrandTotal">0</span></div>
+                    </div>
+                    <div class="flex gap-2">
+                      <button type="reset" class="btn btn-ghost btn-sm">Reset</button>
+                      <button type="submit" class="btn btn-primary gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        Save PO
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+            </div>
+            <!-- RIGHT: Live PDF Preview -->
+            <div id="previewPanel" class="w-full lg:w-1/2 lg:sticky lg:top-4 hidden lg:block">
+              <div class="card bg-base-100 shadow border border-base-300">
+                <div class="card-body p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-sm text-primary flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                      Live PDF Preview
+                    </h3>
+                    <div class="flex items-center gap-2">
+                      <label class="flex items-center gap-1 cursor-pointer text-xs">
+                        <input type="checkbox" id="includeSignToggle" class="checkbox checkbox-xs checkbox-primary" checked onchange="generateLivePreview()">
+                        <span>Include Seal</span>
+                      </label>
+                      <button type="button" class="btn btn-xs btn-ghost lg:hidden" onclick="togglePreviewPanel()">✕</button>
+                    </div>
+                  </div>
+                  <div class="bg-base-200 rounded-lg overflow-hidden" style="height: calc(100vh - 140px); min-height: 500px;">
+                    <iframe id="pdfPreviewFrame" class="w-full h-full border-0" style="background:#525659;"></iframe>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar">
+          <div class="sidebar-brand">PO Manager</div>
+          <ul class="menu menu-md p-4 gap-1 flex-1">
+            <li><a href="../index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="add-po.html" class="active">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="analytics.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+    <script src="../main.js"></script>
+    <script>
+      // Toggle preview on mobile
+      function togglePreviewPanel() {
+        const panel = document.getElementById('previewPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) generateLivePreview();
+      }
+
+      // Debounce helper
+      let _previewTimer = null;
+      function schedulePreview() {
+        clearTimeout(_previewTimer);
+        _previewTimer = setTimeout(generateLivePreview, 400);
+      }
+
+      // Generate PDF and embed in iframe (uses shared buildPODocument)
+      function generateLivePreview() {
+        var frame = document.getElementById('pdfPreviewFrame');
+        if (!frame || !window.jspdf || typeof buildPODocument !== 'function') return;
+
+        var val = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+        var fval = function(id) { return parseFloat(val(id)) || 0; };
+
+        var doc = buildPODocument({
+          po_no: val('po_no'),
+          po_date: val('po_date'),
+          vendor_name: val('vendor_name'),
+          vendor_address: val('vendor_address'),
+          vendor_gstin: val('vendor_gstin'),
+          client_name: val('client_name'),
+          event_name: val('event_name'),
+          event_location: val('event_location'),
+          event_date: val('event_date'),
+          transport: fval('transport'),
+          cgst_percent: fval('cgst_percent'),
+          sgst_percent: fval('sgst_percent'),
+          terms: val('terms'),
+          items: (typeof poItems !== 'undefined') ? poItems : [],
+          includeSign: document.getElementById('includeSignToggle') ? document.getElementById('includeSignToggle').checked : false
+        });
+
+        if (doc) {
+          var blob = doc.output('blob');
+          frame.src = URL.createObjectURL(blob);
+        }
+      }
+
+      window.onload = function() {
+        if (!initPageAuth()) return;
+        // Block non-admin users from creating POs
+        if (!isAdmin()) {
+          document.querySelector('.drawer-content').innerHTML = '<div class="p-6"><div class="alert alert-warning"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg><span>Access denied. Only admins can create Purchase Orders.</span></div><a href="po-list.html" class="btn btn-primary btn-sm mt-4">&larr; View POs</a></div>';
+          return;
+        }
+        initPOForm();
+
+        // Attach live preview listeners to all form fields
+        const formEl = document.getElementById('poForm');
+        if (formEl) {
+          formEl.addEventListener('input', schedulePreview);
+          formEl.addEventListener('change', schedulePreview);
+        }
+
+        // Initial preview after a short delay
+        setTimeout(generateLivePreview, 800);
+      };
+    </script>
+</body>
+</html>

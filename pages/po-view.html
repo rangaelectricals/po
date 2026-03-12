@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View PO - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+    <!-- jsPDF + autoTable for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="../seal.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer lg:drawer-open">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Header -->
+        <div class="w-full navbar modern-navbar sticky top-0 z-30 px-4">
+          <div class="flex-none lg:hidden">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2 text-xl font-bold text-primary">View Purchase Order</div>
+          <a href="po-list.html" class="btn btn-ghost btn-sm">← Back to List</a>
+        </div>
+        <!-- Main Content -->
+        <div class="p-6 max-w-5xl mx-auto w-full">
+          <div id="poView" class="modern-card">
+            <div class="card-body">
+              <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar">
+          <div class="sidebar-brand">PO Manager</div>
+          <ul class="menu menu-md p-4 gap-1 flex-1">
+            <li><a href="../index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="add-po.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="analytics.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+    <script src="../main.js"></script>
+    <script>
+      let currentPO = null;
+
+      function getQueryParam(name) {
+        return new URL(window.location.href).searchParams.get(name);
+      }
+
+      function fmt(n) {
+        return Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function renderPOView(po) {
+        const container = document.getElementById('poView');
+        if (!po) {
+          container.innerHTML = '<div class="card-body"><div class="alert alert-error">PO not found.</div><a href="po-list.html" class="btn btn-ghost btn-sm mt-4">← Back</a></div>';
+          return;
+        }
+        currentPO = po;
+        let items = po.items || [];
+        if (typeof items === 'string') { try { items = JSON.parse(items); } catch(e) { items = []; } }
+        po._items = items;
+
+        let itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+        let transport = parseFloat(po.transport) || 0;
+        let subtotal = itemsTotal + transport;
+        let cgstPct = parseFloat(po.cgst_percent) || 0;
+        let sgstPct = parseFloat(po.sgst_percent) || 0;
+        let cgstAmt = Math.round(subtotal * cgstPct / 100);
+        let sgstAmt = Math.round(subtotal * sgstPct / 100);
+        let grandTotal = po.total || (subtotal + cgstAmt + sgstAmt);
+        let totalQty = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
+
+        let html = '<div class="card-body p-4 md:p-6">';
+
+        // Action buttons
+        html += '<div class="flex flex-wrap gap-2 mb-6 no-print">';
+        html += '<a href="po-edit.html?id=' + encodeURIComponent(po.po_no) + '" class="btn btn-warning btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Edit</a>';
+        html += '<button onclick="downloadPDF()" class="btn btn-error btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> PDF</button>';
+        html += '<button onclick="downloadExcel()" class="btn btn-success btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Excel</button>';
+        html += '<button onclick="window.print()" class="btn btn-ghost btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg> Print</button>';
+        html += '<label class="flex items-center gap-1.5 ml-2 cursor-pointer select-none"><input type="checkbox" id="includeSignToggle" class="checkbox checkbox-xs checkbox-primary" checked><span class="text-xs font-medium">Include Seal</span></label>';
+        html += '</div>';
+
+        // -- Company Header --
+        html += '<div class="text-center border-b-2 border-base-300 pb-3 mb-4">';
+        html += '<div class="text-2xl font-extrabold tracking-wide text-primary">RANGA ELECTRICALS PVT LTD</div>';
+        html += '<div class="text-xs text-base-content/60">NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.</div>';
+        html += '<div class="text-xs text-base-content/60">E-mail: info@rangaelectrical.com</div>';
+        html += '<div class="text-xs font-semibold mt-1">GST IN: 33AAHCR4037J1ZD</div>';
+        html += '</div>';
+
+        html += '<div class="text-center font-bold text-lg border-b border-base-300 pb-2 mb-4">PURCHASE ORDER</div>';
+
+        // -- Vendor & PO Details --
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm">';
+        html += '<div class="border border-base-300 rounded-lg p-3">';
+        html += '<div class="font-semibold text-base-content/60 mb-1">To,</div>';
+        html += '<div class="font-bold">' + (po.vendor_name || '') + '</div>';
+        if (po.vendor_address) html += '<div class="whitespace-pre-line text-base-content/80">' + po.vendor_address + '</div>';
+        if (po.vendor_gstin) html += '<div class="mt-1">GSTIN: <span class="font-semibold">' + po.vendor_gstin + '</span></div>';
+        html += '</div>';
+        html += '<div class="border border-base-300 rounded-lg p-3 space-y-1">';
+        html += '<div class="flex justify-between"><span class="text-base-content/60">PO NO:</span><span class="font-bold text-primary">' + (po.po_no || '') + '</span></div>';
+        html += '<div class="flex justify-between"><span class="text-base-content/60">DATE:</span><span class="font-bold">' + (po.po_date || '') + '</span></div>';
+        if (po.client_name) html += '<div class="border-t border-base-300 pt-1 mt-1"><span class="text-base-content/60">Client Name:</span> <span class="font-bold">M/s. ' + po.client_name + '</span></div>';
+        if (po.event_date) html += '<div><span class="text-base-content/60">Event Date:</span> <span class="font-semibold">' + po.event_date + '</span></div>';
+        html += '</div>';
+        html += '</div>';
+
+        // -- Intro text --
+        html += '<div class="text-sm mb-3 text-base-content/70 italic">We are pleased to place our order in your favour for the supply of following items</div>';
+
+        // -- Items Table --
+        html += '<div class="overflow-x-auto rounded-lg border border-base-300 mb-4">';
+        html += '<table class="table table-sm w-full">';
+        html += '<thead><tr class="bg-base-200"><th>Sl.No</th><th>Item Description</th><th class="text-right">Quantity</th><th>UOM</th><th class="text-right">Per Day Amount</th><th class="text-right">No of Days</th><th class="text-right">Total Value (In INR)</th></tr></thead><tbody>';
+        items.forEach((item, idx) => {
+          html += '<tr>';
+          html += '<td>' + (idx + 1) + '</td>';
+          html += '<td>' + (item.desc || '') + '</td>';
+          html += '<td class="text-right">' + (item.qty || '') + '</td>';
+          html += '<td>' + (item.uom || '') + '</td>';
+          html += '<td class="text-right">' + fmt(item.per_day) + '</td>';
+          html += '<td class="text-right">' + fmt(item.days) + '</td>';
+          html += '<td class="text-right font-semibold">' + fmt(item.total) + '</td>';
+          html += '</tr>';
+        });
+        if (transport > 0) {
+          html += '<tr class="bg-base-200/50"><td>' + (items.length + 1) + '</td><td>TRANSPORT CHARGES</td><td class="text-right"></td><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right font-semibold">' + fmt(transport) + '</td></tr>';
+        }
+        html += '</tbody>';
+        html += '<tfoot><tr class="font-bold bg-base-200"><td colspan="2">Total</td><td class="text-right">' + totalQty + '</td><td colspan="3"></td><td class="text-right">' + fmt(subtotal) + '</td></tr></tfoot>';
+        html += '</table></div>';
+
+        // -- GST & Grand Total --
+        html += '<div class="flex justify-end mb-4"><div class="w-full md:w-1/2 space-y-1 text-sm">';
+        if (cgstPct) html += '<div class="flex justify-between px-3 py-1 bg-base-200 rounded"><span>Add : CGST @ ' + cgstPct + '%</span><span class="font-semibold">\u20b9' + fmt(cgstAmt) + '</span></div>';
+        if (sgstPct) html += '<div class="flex justify-between px-3 py-1 bg-base-200 rounded"><span>Add : SGST @ ' + sgstPct + '%</span><span class="font-semibold">\u20b9' + fmt(sgstAmt) + '</span></div>';
+        html += '<div class="flex justify-between px-3 py-2 bg-primary/10 rounded-lg text-base font-bold"><span>GRAND TOTAL</span><span>\u20b9' + fmt(grandTotal) + '</span></div>';
+        html += '</div></div>';
+
+        // -- Terms --
+        if (po.terms) {
+          html += '<div class="text-sm border-t border-base-300 pt-3 mb-4"><span class="font-semibold">TERMS OF PAYMENT:</span> ' + po.terms + '</div>';
+        }
+
+        // -- Event Location & Signature --
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-base-300 pt-4">';
+        html += '<div><div class="text-xs font-semibold text-base-content/60 mb-1">EVENT LOCATION</div>';
+        if (po.event_name) html += '<div class="font-bold">' + po.event_name + '</div>';
+        if (po.event_location) html += '<div class="whitespace-pre-line text-sm">' + po.event_location + '</div>';
+        html += '</div>';
+        html += '<div class="text-right"><div class="text-xs text-base-content/60">for RANGA ELECTRICALS PVT LTD</div><div class="mt-8 font-bold text-sm border-t border-base-300 pt-1 inline-block">AUTHORISED SIGNATURE</div></div>';
+        html += '</div>';
+
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      // ---- PDF Download ----
+      function downloadPDF() {
+        if (!currentPO) return;
+        const po = currentPO;
+        const items = po._items || [];
+        const transport = parseFloat(po.transport) || 0;
+        const itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+        const subtotal = itemsTotal + transport;
+        const cgstPct = parseFloat(po.cgst_percent) || 0;
+        const sgstPct = parseFloat(po.sgst_percent) || 0;
+        const cgstAmt = Math.round(subtotal * cgstPct / 100);
+        const sgstAmt = Math.round(subtotal * sgstPct / 100);
+        const grandTotal = po.total || (subtotal + cgstAmt + sgstAmt);
+        const totalQty = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageW = doc.internal.pageSize.getWidth();
+        let y = 12;
+
+        // Company Header
+        doc.setFontSize(16); doc.setFont(undefined, 'bold');
+        doc.text('RANGA ELECTRICALS PVT LTD', pageW / 2, y, { align: 'center' }); y += 6;
+        doc.setFontSize(8); doc.setFont(undefined, 'normal');
+        doc.text('NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.', pageW / 2, y, { align: 'center' }); y += 4;
+        doc.text('E-mail: info@rangaelectrical.com', pageW / 2, y, { align: 'center' }); y += 4;
+        doc.setFont(undefined, 'bold');
+        doc.text('GST IN: 33AAHCR4037J1ZD', pageW / 2, y, { align: 'center' }); y += 6;
+        doc.setDrawColor(0); doc.line(14, y, pageW - 14, y); y += 5;
+
+        // PURCHASE ORDER title
+        doc.setFontSize(12); doc.setFont(undefined, 'bold');
+        doc.text('PURCHASE ORDER', pageW / 2, y, { align: 'center' }); y += 8;
+
+        // ── Two card boxes side by side ──
+        var margin = 14;
+        var gap = 4;
+        var boxW = (pageW - margin * 2 - gap) / 2;
+        var leftBoxX = margin;
+        var rightBoxX = margin + boxW + gap;
+        var boxStartY = y;
+
+        // --- Left box: Vendor details ---
+        var ly = boxStartY + 5;
+        doc.setFontSize(9); doc.setFont(undefined, 'normal');
+        doc.setTextColor(120, 120, 120);
+        doc.text('To,', leftBoxX + 4, ly); ly += 5;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'bold'); doc.setFontSize(10);
+        doc.text(po.vendor_name || '________', leftBoxX + 4, ly); ly += 5;
+        doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+        if (po.vendor_address) {
+            var addrLines = doc.splitTextToSize(po.vendor_address, boxW - 8);
+            addrLines.forEach(function(l) { doc.text(l, leftBoxX + 4, ly); ly += 3.5; });
+        }
+        if (po.vendor_gstin) { ly += 1; doc.text('GSTIN: ' + po.vendor_gstin, leftBoxX + 4, ly); ly += 4; }
+        var leftBoxH = ly - boxStartY + 3;
+
+        // --- Right box: PO details ---
+        var ry = boxStartY + 5;
+        doc.setFontSize(9); doc.setFont(undefined, 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text('PO NO:', rightBoxX + 4, ry);
+        doc.setTextColor(37, 99, 235);
+        doc.setFont(undefined, 'bold');
+        doc.text(po.po_no || '____', rightBoxX + boxW - 4, ry, { align: 'right' }); ry += 5;
+        doc.setTextColor(100, 100, 100);
+        doc.setFont(undefined, 'normal');
+        doc.text('DATE:', rightBoxX + 4, ry);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'bold');
+        doc.text(po.po_date || '____', rightBoxX + boxW - 4, ry, { align: 'right' }); ry += 6;
+        doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+        if (po.client_name) {
+            doc.text('Client Name:', rightBoxX + 4, ry);
+            doc.setFont(undefined, 'bold');
+            doc.text('M/s. ' + po.client_name, rightBoxX + 28, ry);
+            doc.setFont(undefined, 'normal');
+            ry += 5;
+        }
+        if (po.event_date) {
+            doc.text('Event Date:', rightBoxX + 4, ry);
+            doc.setFont(undefined, 'bold');
+            doc.text(po.event_date, rightBoxX + 28, ry);
+            doc.setFont(undefined, 'normal');
+            ry += 5;
+        }
+        var rightBoxH = ry - boxStartY + 3;
+
+        // Use the taller box height for both
+        var boxH = Math.max(leftBoxH, rightBoxH, 28);
+
+        // Draw rounded rect borders
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(leftBoxX, boxStartY, boxW, boxH, 2, 2, 'S');
+        doc.roundedRect(rightBoxX, boxStartY, boxW, boxH, 2, 2, 'S');
+
+        y = boxStartY + boxH + 6;
+
+        // Instruction line
+        const rightX = pageW - 14;
+        doc.setFont(undefined, 'italic'); doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+        doc.text('We are pleased to place our order in your favour for the supply of following items', margin, y); y += 6;
+
+        // Items table
+        const tableRows = items.map(function(item, idx) {
+          return [
+            idx + 1,
+            item.desc || '',
+            item.qty || '',
+            item.uom || '',
+            Number(item.per_day || 0).toFixed(2),
+            Number(item.days || 0).toFixed(2),
+            Number(item.total || 0).toFixed(2)
+          ];
+        });
+        if (transport > 0) {
+          tableRows.push([items.length + 1, 'TRANSPORT CHARGES', '', '', '', '', transport.toFixed(2)]);
+        }
+
+        doc.autoTable({
+          startY: y,
+          head: [['Sl.No', 'Item Description', 'Qty', 'UOM', 'Per Day Amt', 'Days', 'Total (INR)']],
+          body: tableRows,
+          foot: [['', 'Total', String(totalQty), '', '', '', subtotal.toFixed(2)]],
+          styles: { fontSize: 8, cellPadding: 1.5 },
+          headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+          footStyles: { fillColor: [236, 240, 241], textColor: [0, 0, 0], fontStyle: 'bold' },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 12 },
+            2: { halign: 'right', cellWidth: 14 },
+            4: { halign: 'right', cellWidth: 22 },
+            5: { halign: 'right', cellWidth: 14 },
+            6: { halign: 'right', cellWidth: 26 }
+          },
+          margin: { left: 14, right: 14 }
+        });
+
+        y = doc.lastAutoTable.finalY + 4;
+
+        // GST rows
+        doc.setFontSize(9); doc.setFont(undefined, 'normal');
+        if (cgstPct) { doc.text('Add : CGST @ ' + cgstPct + '%', rightX - 60, y); doc.text(cgstAmt.toFixed(2), rightX, y, { align: 'right' }); y += 5; }
+        if (sgstPct) { doc.text('Add : SGST @ ' + sgstPct + '%', rightX - 60, y); doc.text(sgstAmt.toFixed(2), rightX, y, { align: 'right' }); y += 5; }
+        doc.setFont(undefined, 'bold'); doc.setFontSize(10);
+        doc.text('GRAND TOTAL', rightX - 60, y); doc.text(Number(grandTotal).toFixed(2), rightX, y, { align: 'right' }); y += 8;
+
+        // Terms
+        doc.setFontSize(8); doc.setFont(undefined, 'normal');
+        if (po.terms) { doc.text('TERMS OF PAYMENT: ' + po.terms, 14, y); y += 6; }
+
+        // Event Location & Signature
+        doc.setDrawColor(0); doc.line(14, y, pageW - 14, y); y += 5;
+        var signStartY = y;
+        doc.setFont(undefined, 'bold'); doc.text('EVENT LOCATION', 14, y);
+        doc.setFont(undefined, 'normal'); doc.text('for RANGA ELECTRICALS PVT LTD', rightX, y, { align: 'right' }); y += 5;
+        if (po.event_name) { doc.setFont(undefined, 'bold'); doc.text(po.event_name, 14, y); y += 4; }
+        if (po.event_location) {
+          doc.setFont(undefined, 'normal');
+          var locLines = doc.splitTextToSize(po.event_location, 80);
+          locLines.forEach(function(l) { doc.text(l, 14, y); y += 3.5; });
+        }
+
+        // Right side: seal + signature block
+        var signCenterX = rightX - 22;
+        var sealY = signStartY + 4;
+        var includeSign = document.getElementById('includeSignToggle');
+        var showSeal = (!includeSign || includeSign.checked) && typeof COMPANY_SEAL_IMG === 'string';
+
+        if (showSeal) {
+            try { doc.addImage(COMPANY_SEAL_IMG, 'PNG', signCenterX - 12.5, sealY, 25, 25); } catch(e) {}
+        }
+
+        var sigLineY = sealY + (showSeal ? 27 : 20);
+        doc.setDrawColor(150);
+        doc.line(signCenterX - 22, sigLineY, signCenterX + 22, sigLineY);
+        doc.setFont(undefined, 'bold'); doc.setFontSize(8);
+        doc.text('AUTHORISED SIGNATURE', signCenterX, sigLineY + 4, { align: 'center' });
+
+        y = Math.max(y, sigLineY + 8);
+
+        doc.save('PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.pdf');
+      }
+
+      // ---- Excel Download ----
+      function downloadExcel() {
+        if (!currentPO) return;
+        const po = currentPO;
+        const items = po._items || [];
+        const transport = parseFloat(po.transport) || 0;
+        const itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+        const subtotal = itemsTotal + transport;
+        const cgstPct = parseFloat(po.cgst_percent) || 0;
+        const sgstPct = parseFloat(po.sgst_percent) || 0;
+        const cgstAmt = Math.round(subtotal * cgstPct / 100);
+        const sgstAmt = Math.round(subtotal * sgstPct / 100);
+        const grandTotal = po.total || (subtotal + cgstAmt + sgstAmt);
+        const totalQty = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
+
+        const rows = [];
+        rows.push(['RANGA ELECTRICALS PVT LTD']);
+        rows.push(['NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.']);
+        rows.push(['GST IN: 33AAHCR4037J1ZD']);
+        rows.push([]);
+        rows.push(['PURCHASE ORDER']);
+        rows.push([]);
+        rows.push(['To:', po.vendor_name || '', '', 'PO NO:', po.po_no || '']);
+        if (po.vendor_address) rows.push(['', po.vendor_address, '', 'DATE:', po.po_date || '']);
+        else rows.push(['', '', '', 'DATE:', po.po_date || '']);
+        if (po.vendor_gstin) rows.push(['GSTIN:', po.vendor_gstin]);
+        rows.push([]);
+        if (po.client_name) rows.push(['Client Name:', 'M/s. ' + po.client_name]);
+        if (po.event_date) rows.push(['Event Date:', po.event_date]);
+        rows.push([]);
+        rows.push(['Sl.No', 'Item Description', 'Quantity', 'UOM', 'Per Day Amount', 'No of Days', 'Total Value (INR)']);
+        items.forEach(function(item, idx) {
+          rows.push([idx + 1, item.desc || '', item.qty || '', item.uom || '', item.per_day || 0, item.days || 0, item.total || 0]);
+        });
+        if (transport > 0) {
+          rows.push([items.length + 1, 'TRANSPORT CHARGES', '', '', '', '', transport]);
+        }
+        rows.push([]);
+        rows.push(['', 'Total', totalQty, '', '', '', subtotal]);
+        if (cgstPct) rows.push(['', '', '', '', '', 'Add : CGST @ ' + cgstPct + '%', cgstAmt]);
+        if (sgstPct) rows.push(['', '', '', '', '', 'Add : SGST @ ' + sgstPct + '%', sgstAmt]);
+        rows.push(['', '', '', '', '', 'GRAND TOTAL', grandTotal]);
+        rows.push([]);
+        if (po.terms) rows.push(['TERMS OF PAYMENT:', po.terms]);
+        rows.push([]);
+        rows.push(['EVENT LOCATION:', po.event_name || '']);
+        if (po.event_location) rows.push(['', po.event_location]);
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 8 }, { wch: 38 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 20 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'PurchaseOrder');
+        XLSX.writeFile(wb, 'PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.xlsx');
+      }
+
+      window.onload = function() {
+        if (!initPageAuth()) return;
+        const poId = String(getQueryParam('id') || '').trim();
+        gsFetch(GOOGLE_SCRIPT_URL + '?action=read')
+          .then(r => r.json())
+          .then(data => {
+            const po = (data || []).find(p => String(p.po_no || '').trim() === poId || String(p.po_id || '').trim() === poId);
+            renderPOView(po);
+          })
+          .catch(() => {
+            document.getElementById('poView').innerHTML = '<div class="card-body"><div class="alert alert-error">Failed to load PO data.</div></div>';
+          });
+      };
+    </script>
+</body>
+</html>

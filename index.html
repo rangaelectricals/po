@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer lg:drawer-open">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Navbar -->
+        <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
+          <div class="flex-none lg:hidden">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2">
+            <span class="page-title">Dashboard</span>
+          </div>
+        </div>
+        <!-- Main Content -->
+        <div class="p-4 lg:p-6 animate-fadeIn">
+          <!-- Hero Header -->
+          <div class="page-hero bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 animate-slideDown">
+            <div class="hero-bg-blob w-64 h-64 bg-white" style="top:-40px;left:-20px;"></div>
+            <div class="hero-bg-blob w-48 h-48 bg-yellow-300" style="top:-20px;right:10%;"></div>
+            <div class="hero-bg-blob w-56 h-56 bg-pink-300" style="bottom:-40px;right:-20px;"></div>
+            <div class="hero-content">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+                </div>
+                <div>
+                  <h1 class="hero-title text-2xl">Welcome to PO Manager</h1>
+                  <p class="hero-subtitle">RANGA ELECTRICALS PVT LTD</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600">
+              <div class="stat-card-blob"></div>
+              <div class="flex items-center justify-between relative">
+                <div>
+                  <div class="stat-card-label">Total POs</div>
+                  <div class="stat-card-value" id="statPOs">--</div>
+                </div>
+                <div class="stat-card-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                </div>
+              </div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600">
+              <div class="stat-card-blob"></div>
+              <div class="flex items-center justify-between relative">
+                <div>
+                  <div class="stat-card-label">Vendors</div>
+                  <div class="stat-card-value" id="statVendors">--</div>
+                </div>
+                <div class="stat-card-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+              </div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-emerald-500 to-emerald-600">
+              <div class="stat-card-blob"></div>
+              <div class="flex items-center justify-between relative">
+                <div>
+                  <div class="stat-card-label">Items</div>
+                  <div class="stat-card-value" id="statItems">--</div>
+                </div>
+                <div class="stat-card-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                </div>
+              </div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-orange-500 to-rose-500 crud-action">
+              <div class="stat-card-blob"></div>
+              <div class="flex items-center justify-between relative">
+                <div>
+                  <div class="stat-card-label">Quick Action</div>
+                  <a href="pages/add-po.html" class="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-semibold text-white hover:bg-white/30 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    New PO
+                  </a>
+                </div>
+                <div class="stat-card-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Navigation -->
+          <div class="modern-card">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-slate-500 to-gray-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              </div>
+              <div class="header-title">Quick Navigation</div>
+            </div>
+            <div class="card-content">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <a href="pages/po-list.html" class="nav-card group">
+                  <div class="nav-card-icon bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  </div>
+                  <div class="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">Purchase Orders</div>
+                  <div class="text-xs text-slate-500 mt-0.5">View, create, and manage all POs</div>
+                </a>
+                <a href="pages/analytics.html" class="nav-card group">
+                  <div class="nav-card-icon bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  </div>
+                  <div class="font-semibold text-slate-800 group-hover:text-fuchsia-600 transition-colors">Analytics</div>
+                  <div class="text-xs text-slate-500 mt-0.5">Charts, reports & insights</div>
+                </a>
+                <a href="pages/vendor-master.html" class="nav-card group">
+                  <div class="nav-card-icon bg-gradient-to-br from-purple-500 to-violet-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  </div>
+                  <div class="font-semibold text-slate-800 group-hover:text-purple-600 transition-colors">Vendor Master</div>
+                  <div class="text-xs text-slate-500 mt-0.5">Manage vendor records</div>
+                </a>
+                <a href="pages/item-master.html" class="nav-card group">
+                  <div class="nav-card-icon bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                  </div>
+                  <div class="font-semibold text-slate-800 group-hover:text-emerald-600 transition-colors">Item Master</div>
+                  <div class="text-xs text-slate-500 mt-0.5">Manage item records</div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar flex flex-col w-64 min-h-full">
+          <div class="sidebar-brand">
+            <div class="brand-title">PO Manager</div>
+            <div class="brand-subtitle">Ranga Electricals</div>
+          </div>
+          <ul class="menu menu-md flex-1">
+            <li><a href="index.html" class="active">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="pages/add-po.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="pages/po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="pages/analytics.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="pages/vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="pages/item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+    <script src="main.js"></script>
+    <script>
+      window.onload = function() {
+        if (!initPageAuth()) return;
+        fetchAll(function(data) {
+          if (data) {
+            document.getElementById('statPOs').textContent = Array.isArray(data.pos) ? data.pos.length : 0;
+            document.getElementById('statVendors').textContent = Array.isArray(data.vendors) ? data.vendors.length : 0;
+            document.getElementById('statItems').textContent = Array.isArray(data.items) ? data.items.length : 0;
+          } else {
+            document.getElementById('statPOs').textContent = '0';
+            document.getElementById('statVendors').textContent = '0';
+            document.getElementById('statItems').textContent = '0';
+          }
+        });
+      };
+    </script>
+</body>
+</html>

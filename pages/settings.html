@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer lg:drawer-open">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Navbar -->
+        <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
+          <div class="flex-none lg:hidden">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2">
+            <span class="page-title">Settings</span>
+          </div>
+        </div>
+        <!-- Main Content -->
+        <div class="p-4 lg:p-6 animate-fadeIn" id="settingsPageContent">
+          <!-- Hero Header -->
+          <div class="page-hero bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 animate-slideDown">
+            <div class="hero-bg-blob w-64 h-64 bg-indigo-400" style="top:-40px;left:-20px;"></div>
+            <div class="hero-bg-blob w-48 h-48 bg-cyan-300" style="top:-20px;right:10%;"></div>
+            <div class="hero-bg-blob w-56 h-56 bg-violet-300" style="bottom:-40px;right:-20px;"></div>
+            <div class="hero-content flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div class="flex items-center gap-3">
+                <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <div>
+                  <h1 class="hero-title">Settings</h1>
+                  <p class="hero-subtitle">Manage company seal, signature & application preferences</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Company Seal / Signature Card -->
+          <div class="modern-card mb-6 animate-fadeIn">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              </div>
+              <div>
+                <div class="header-title">Company Seal / Signature</div>
+                <div class="header-subtitle">Upload or update the seal image used in PO PDFs</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Upload Area -->
+                <div>
+                  <div class="mb-4">
+                    <label class="label"><span class="label-text font-semibold text-sm">Upload Seal Image</span></label>
+                    <p class="text-xs text-base-content/50 mb-3">Accepts PNG, JPG or JPEG. Recommended: transparent PNG, ~300×300px.</p>
+                    <!-- Drop zone -->
+                    <div id="sealDropZone" class="relative border-2 border-dashed border-base-300 rounded-xl p-8 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-200 group" onclick="document.getElementById('sealFileInput').click()" ondragover="event.preventDefault();this.classList.add('border-primary','bg-primary/5')" ondragleave="this.classList.remove('border-primary','bg-primary/5')" ondrop="handleSealDrop(event)">
+                      <input type="file" id="sealFileInput" accept="image/png,image/jpeg,image/jpg" class="hidden" onchange="handleSealFileSelect(this)">
+                      <div class="flex flex-col items-center gap-2">
+                        <div class="p-3 rounded-full bg-base-200 group-hover:bg-primary/10 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-base-content/30 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                        <p class="text-sm font-medium text-base-content/60">Drop image here or <span class="text-primary font-semibold">browse</span></p>
+                        <p class="text-xs text-base-content/40">PNG, JPG up to 500KB</p>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Action Buttons -->
+                  <div class="flex flex-wrap gap-2">
+                    <button id="saveSealBtn" class="btn btn-primary btn-sm btn-modern gap-1" onclick="saveSeal()" disabled>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                      Save Seal
+                    </button>
+                    <button id="removeSealBtn" class="btn btn-error btn-sm btn-outline btn-modern gap-1" onclick="removeSeal()">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      Remove Seal
+                    </button>
+                  </div>
+                  <!-- Status message -->
+                  <div id="sealStatus" class="mt-3 hidden"></div>
+                </div>
+                <!-- Right: Preview -->
+                <div>
+                  <label class="label"><span class="label-text font-semibold text-sm">Current Seal Preview</span></label>
+                  <div id="sealPreviewBox" class="mt-1 relative rounded-xl border border-base-200 bg-base-200/30 flex items-center justify-center overflow-hidden" style="min-height:220px;">
+                    <!-- Loading state -->
+                    <div id="sealPreviewLoading" class="absolute inset-0 flex items-center justify-center bg-base-100/80 z-10">
+                      <span class="loading loading-spinner loading-md text-primary"></span>
+                    </div>
+                    <!-- Empty state -->
+                    <div id="sealPreviewEmpty" class="text-center p-6 hidden">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-base-content/15 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <p class="text-sm text-base-content/40 font-medium">No seal uploaded</p>
+                      <p class="text-xs text-base-content/30 mt-1">Upload a PNG or JPG image</p>
+                    </div>
+                    <!-- Image preview -->
+                    <img id="sealPreviewImg" class="max-w-full max-h-52 object-contain p-4 hidden" alt="Company Seal Preview">
+                  </div>
+                  <div id="sealInfo" class="mt-2 hidden">
+                    <div class="flex items-center gap-2 text-xs text-base-content/50">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span id="sealInfoText">—</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Company Info Card -->
+          <div class="modern-card mb-6 animate-fadeIn" style="animation-delay:0.1s">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              </div>
+              <div>
+                <div class="header-title">Company Information</div>
+                <div class="header-subtitle">Used in PO headers and PDF exports</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Company Name</span></label>
+                  <input id="settCompanyName" type="text" class="input input-bordered input-sm input-modern" placeholder="e.g. Ranga Electricals" />
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">GSTIN</span></label>
+                  <input id="settCompanyGstin" type="text" class="input input-bordered input-sm input-modern" placeholder="e.g. 33AAHCR4037J1ZD" />
+                </div>
+                <div class="form-control md:col-span-2">
+                  <label class="label"><span class="label-text font-medium text-sm">Address</span></label>
+                  <textarea id="settCompanyAddress" class="textarea textarea-bordered textarea-sm" rows="2" placeholder="Full company address"></textarea>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Phone</span></label>
+                  <input id="settCompanyPhone" type="text" class="input input-bordered input-sm input-modern" placeholder="e.g. +91 98765 43210" />
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Email</span></label>
+                  <input id="settCompanyEmail" type="email" class="input input-bordered input-sm input-modern" placeholder="e.g. info@company.com" />
+                </div>
+              </div>
+              <div class="mt-4 flex">
+                <button class="btn btn-primary btn-sm btn-modern gap-1" onclick="saveCompanyInfo()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  Save Company Info
+                </button>
+                <div id="companyInfoStatus" class="ml-3 hidden"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PO Settings Card -->
+          <div class="modern-card mb-6 animate-fadeIn" style="animation-delay:0.2s">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              </div>
+              <div>
+                <div class="header-title">PO Defaults</div>
+                <div class="header-subtitle">Default values for new purchase orders</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">PO Number Prefix</span></label>
+                  <input id="settPoPrefix" type="text" class="input input-bordered input-sm input-modern" placeholder="RE" value="RE" />
+                  <label class="label"><span class="label-text-alt text-base-content/50">Format: PREFIX/EO/SEQ &nbsp;&mdash;&nbsp; e.g. <span class="font-mono text-primary">RE/EO/001</span></span></label>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Sequence Start Number</span></label>
+                  <input id="settPoStartSeq" type="number" min="1" step="1" class="input input-bordered input-sm input-modern" placeholder="1" value="1" />
+                  <label class="label"><span class="label-text-alt text-base-content/50">The next PO will use at least this sequence number</span></label>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Default Terms</span></label>
+                  <textarea id="settDefaultTerms" class="textarea textarea-bordered textarea-sm" rows="2" placeholder="e.g. Payment within 30 days"></textarea>
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Default CGST %</span></label>
+                  <input id="settDefaultCgst" type="number" step="0.01" class="input input-bordered input-sm input-modern" placeholder="9" />
+                </div>
+                <div class="form-control">
+                  <label class="label"><span class="label-text font-medium text-sm">Default SGST %</span></label>
+                  <input id="settDefaultSgst" type="number" step="0.01" class="input input-bordered input-sm input-modern" placeholder="9" />
+                </div>
+              </div>
+              <div class="mt-4 flex">
+                <button class="btn btn-primary btn-sm btn-modern gap-1" onclick="savePODefaults()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  Save PO Defaults
+                </button>
+                <div id="poDefaultsStatus" class="ml-3 hidden"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar flex flex-col w-64 min-h-full">
+          <div class="sidebar-brand">
+            <div class="brand-title">PO Manager</div>
+            <div class="brand-subtitle">Ranga Electricals</div>
+          </div>
+          <ul class="menu menu-md flex-1">
+            <li><a href="../index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="add-po.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="analytics.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+            <li><a href="settings.html" class="active">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Settings
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+    <script src="../main.js"></script>
+    <script>
+      // ============================================================
+      // SETTINGS PAGE LOGIC
+      // ============================================================
+      var _pendingSealBase64 = null; // staged new seal before saving
+
+      // ── Load existing settings on page load ──
+      function loadSettings() {
+        // Show loading
+        document.getElementById('sealPreviewLoading').classList.remove('hidden');
+        document.getElementById('sealPreviewEmpty').classList.add('hidden');
+        document.getElementById('sealPreviewImg').classList.add('hidden');
+
+        gsFetchCached('read_settings').then(function(settings) {
+          document.getElementById('sealPreviewLoading').classList.add('hidden');
+          if (!settings || settings.error) {
+            showSealEmpty();
+            return;
+          }
+          // Seal
+          if (settings.seal) {
+            showSealPreview(settings.seal);
+            // Also update global COMPANY_SEAL_IMG
+            window.COMPANY_SEAL_IMG = settings.seal;
+          } else {
+            showSealEmpty();
+          }
+          // Company info
+          if (settings.company_name)    document.getElementById('settCompanyName').value = settings.company_name;
+          if (settings.company_gstin)   document.getElementById('settCompanyGstin').value = settings.company_gstin;
+          if (settings.company_address) document.getElementById('settCompanyAddress').value = settings.company_address;
+          if (settings.company_phone)   document.getElementById('settCompanyPhone').value = settings.company_phone;
+          if (settings.company_email)   document.getElementById('settCompanyEmail').value = settings.company_email;
+          // PO defaults
+          if (settings.po_prefix)       document.getElementById('settPoPrefix').value = settings.po_prefix;
+          if (settings.po_start_seq)    document.getElementById('settPoStartSeq').value = settings.po_start_seq;
+          if (settings.default_terms)   document.getElementById('settDefaultTerms').value = settings.default_terms;
+          if (settings.default_cgst)    document.getElementById('settDefaultCgst').value = settings.default_cgst;
+          if (settings.default_sgst)    document.getElementById('settDefaultSgst').value = settings.default_sgst;
+        }).catch(function() {
+          document.getElementById('sealPreviewLoading').classList.add('hidden');
+          showSealEmpty();
+        });
+      }
+
+      // ── Seal Preview Helpers ──
+      function showSealPreview(dataUrl) {
+        var img = document.getElementById('sealPreviewImg');
+        var empty = document.getElementById('sealPreviewEmpty');
+        var info = document.getElementById('sealInfo');
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+        empty.classList.add('hidden');
+        info.classList.remove('hidden');
+        // Size info
+        var sizeKB = Math.round((dataUrl.length * 3 / 4) / 1024);
+        document.getElementById('sealInfoText').textContent = 'Size: ~' + sizeKB + ' KB  •  Base64 encoded';
+      }
+
+      function showSealEmpty() {
+        document.getElementById('sealPreviewImg').classList.add('hidden');
+        document.getElementById('sealPreviewEmpty').classList.remove('hidden');
+        document.getElementById('sealInfo').classList.add('hidden');
+      }
+
+      // ── File Handling ──
+      function handleSealFileSelect(input) {
+        if (input.files && input.files[0]) processSealFile(input.files[0]);
+      }
+      function handleSealDrop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) processSealFile(e.dataTransfer.files[0]);
+      }
+
+      function processSealFile(file) {
+        // Validate type
+        if (!file.type.match(/^image\/(png|jpeg|jpg)$/)) {
+          showSealStatus('Only PNG and JPG images are allowed.', 'error');
+          return;
+        }
+        // Validate size (500KB max)
+        if (file.size > 500 * 1024) {
+          showSealStatus('Image must be under 500KB. Current: ' + Math.round(file.size / 1024) + 'KB', 'error');
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          _pendingSealBase64 = e.target.result;
+          showSealPreview(_pendingSealBase64);
+          document.getElementById('saveSealBtn').disabled = false;
+          showSealStatus('New image staged. Click "Save Seal" to apply.', 'info');
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // ── Save Seal to Backend ──
+      function saveSeal() {
+        if (!_pendingSealBase64) return;
+        var btn = document.getElementById('saveSealBtn');
+        setBtnLoading(btn, true);
+        showSealStatus('Uploading seal...', 'info');
+
+        gsPost({ action: 'save_setting', key: 'seal', value: _pendingSealBase64 })
+        .then(function(resp) {
+          setBtnLoading(btn, false);
+          if (resp && resp.success) {
+            window.COMPANY_SEAL_IMG = _pendingSealBase64;
+            _pendingSealBase64 = null;
+            btn.disabled = true;
+            invalidateCache('read_settings');
+            showSealStatus('Seal saved successfully!', 'success');
+          } else {
+            showSealStatus('Failed to save: ' + (resp.error || 'Unknown error'), 'error');
+          }
+        }).catch(function(err) {
+          setBtnLoading(btn, false);
+          showSealStatus('Error: ' + err.message, 'error');
+        });
+      }
+
+      // ── Remove Seal ──
+      function removeSeal() {
+        if (!confirm('Remove the company seal? This cannot be undone.')) return;
+        var btn = document.getElementById('removeSealBtn');
+        setBtnLoading(btn, true);
+
+        gsPost({ action: 'save_setting', key: 'seal', value: '' })
+        .then(function(resp) {
+          setBtnLoading(btn, false);
+          if (resp && resp.success) {
+            window.COMPANY_SEAL_IMG = '';
+            _pendingSealBase64 = null;
+            document.getElementById('saveSealBtn').disabled = true;
+            invalidateCache('read_settings');
+            showSealEmpty();
+            showSealStatus('Seal removed.', 'success');
+            // Reset file input
+            document.getElementById('sealFileInput').value = '';
+          } else {
+            showSealStatus('Failed: ' + (resp.error || 'Unknown error'), 'error');
+          }
+        }).catch(function(err) {
+          setBtnLoading(btn, false);
+          showSealStatus('Error: ' + err.message, 'error');
+        });
+      }
+
+      // ── Save Company Info ──
+      function saveCompanyInfo() {
+        var data = {
+          company_name:    document.getElementById('settCompanyName').value.trim(),
+          company_gstin:   document.getElementById('settCompanyGstin').value.trim(),
+          company_address: document.getElementById('settCompanyAddress').value.trim(),
+          company_phone:   document.getElementById('settCompanyPhone').value.trim(),
+          company_email:   document.getElementById('settCompanyEmail').value.trim()
+        };
+        var statusEl = document.getElementById('companyInfoStatus');
+        statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-info';
+        statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Saving...';
+        statusEl.classList.remove('hidden');
+
+        gsPost({ action: 'save_settings_bulk', settings: data })
+        .then(function(resp) {
+          if (resp && resp.success) {
+            invalidateCache('read_settings');
+            statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-success';
+            statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Saved!';
+          } else {
+            statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-error';
+            statusEl.textContent = 'Failed: ' + (resp.error || 'Unknown');
+          }
+          setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+        }).catch(function(err) {
+          statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-error';
+          statusEl.textContent = 'Error: ' + err.message;
+        });
+      }
+
+      // ── Save PO Defaults ──
+      function savePODefaults() {
+        var data = {
+          po_prefix:     document.getElementById('settPoPrefix').value.trim(),
+          po_start_seq:  document.getElementById('settPoStartSeq').value.trim(),
+          default_terms: document.getElementById('settDefaultTerms').value.trim(),
+          default_cgst:  document.getElementById('settDefaultCgst').value.trim(),
+          default_sgst:  document.getElementById('settDefaultSgst').value.trim()
+        };
+        var statusEl = document.getElementById('poDefaultsStatus');
+        statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-info';
+        statusEl.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Saving...';
+        statusEl.classList.remove('hidden');
+
+        gsPost({ action: 'save_settings_bulk', settings: data })
+        .then(function(resp) {
+          if (resp && resp.success) {
+            invalidateCache('read_settings');
+            statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-success';
+            statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Saved!';
+          } else {
+            statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-error';
+            statusEl.textContent = 'Failed: ' + (resp.error || 'Unknown');
+          }
+          setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+        }).catch(function(err) {
+          statusEl.className = 'ml-3 flex items-center gap-1 text-xs text-error';
+          statusEl.textContent = 'Error: ' + err.message;
+        });
+      }
+
+      // ── Status helper ──
+      function showSealStatus(msg, type) {
+        var el = document.getElementById('sealStatus');
+        var colorClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-info';
+        el.className = 'mt-3 alert ' + colorClass + ' alert-sm py-2 text-xs';
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        if (type === 'success' || type === 'info') {
+          setTimeout(function() { el.classList.add('hidden'); }, 4000);
+        }
+      }
+
+      // ── Init ──
+      window.onload = function() {
+        if (!initPageAuth()) return;
+        if (!isAdmin()) {
+          document.getElementById('settingsPageContent').innerHTML = '<div class="alert alert-warning mt-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Settings are only accessible to administrators.</span></div>';
+          return;
+        }
+        loadSettings();
+      };
+    </script>
+</body>
+</html>

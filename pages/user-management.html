@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer lg:drawer-open">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Navbar -->
+        <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
+          <div class="flex-none lg:hidden">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2">
+            <span class="page-title">User Management</span>
+          </div>
+        </div>
+        <!-- Main Content -->
+        <div class="p-4 lg:p-6 animate-fadeIn" id="userPageContent">
+          <!-- Hero Header -->
+          <div class="page-hero bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 animate-slideDown">
+            <div class="hero-bg-blob w-64 h-64 bg-white" style="top:-40px;left:-20px;"></div>
+            <div class="hero-bg-blob w-48 h-48 bg-yellow-300" style="top:-20px;right:10%;"></div>
+            <div class="hero-bg-blob w-56 h-56 bg-orange-300" style="bottom:-40px;right:-20px;"></div>
+            <div class="hero-content flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div class="flex items-center gap-3">
+                <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                </div>
+                <div>
+                  <h1 class="hero-title">User Management</h1>
+                  <p class="hero-subtitle">Add, remove and manage user access and roles</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add User Card -->
+          <div class="modern-card mb-6 animate-fadeIn">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-rose-500 to-pink-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+              </div>
+              <div>
+                <div class="header-title">Add New User</div>
+                <div class="header-subtitle">Create a new user account with role assignment</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div class="form-control">
+                  <input id="newUsername" type="text" placeholder="Username" class="input input-bordered input-sm input-modern" />
+                </div>
+                <div class="form-control">
+                  <input id="newPassword" type="password" placeholder="Password" class="input input-bordered input-sm input-modern" />
+                </div>
+                <div class="form-control">
+                  <select id="newRole" class="select select-bordered select-sm input-modern">
+                    <option value="viewer">Viewer (View Only)</option>
+                    <option value="admin">Admin (Full Access)</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-modern" onclick="addUser()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                  Add User
+                </button>
+              </div>
+              <div id="addUserError" class="text-error text-sm mt-2 hidden"></div>
+            </div>
+          </div>
+
+          <!-- Users List -->
+          <div class="modern-card animate-fadeIn">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              </div>
+              <div>
+                <div class="header-title">All Users</div>
+                <div class="header-subtitle">Manage existing user accounts</div>
+              </div>
+              <div class="ml-auto">
+                <div class="search-bar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  <input type="text" id="userSearchInput" placeholder="Search users..." class="search-input" oninput="filterUserList(this.value)" />
+                  <kbd class="search-kbd">Ctrl+K</kbd>
+                </div>
+              </div>
+            </div>
+            <div id="usersList" class="overflow-x-auto"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar flex flex-col w-64 min-h-full">
+          <div class="sidebar-brand">
+            <div class="brand-title">PO Manager</div>
+            <div class="brand-subtitle">Ranga Electricals</div>
+          </div>
+          <ul class="menu menu-md flex-1">
+            <li><a href="../index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="add-po.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="analytics.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+            <li><a href="user-management.html" class="active">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              User Management
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+    <script src="../main.js"></script>
+    <script>
+      var _users = [];
+      var _userSearchTerm = '';
+
+      function filterUserList(term) {
+        _userSearchTerm = (term || '').toLowerCase().trim();
+        _renderUserTable();
+      }
+
+      function _renderUserTable() {
+        var el = document.getElementById('usersList');
+        if (!_users.length) {
+          el.innerHTML = '<div class="p-4 text-base-content/60">No users found.</div>';
+          return;
+        }
+        var currentUser = getSessionUser();
+        var filtered = _users;
+        if (_userSearchTerm) {
+          filtered = _users.filter(function(u) {
+            return (u.username || '').toLowerCase().includes(_userSearchTerm)
+                || (u.role || '').toLowerCase().includes(_userSearchTerm);
+          });
+        }
+        if (filtered.length === 0 && _userSearchTerm) {
+          el.innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg><p class="text-sm">No users match "<strong>' + escHtml(_userSearchTerm) + '</strong>"</p></div>';
+          return;
+        }
+        var html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Username</th><th>Role</th><th>Actions</th></tr></thead><tbody>';
+        filtered.forEach(function(u, fi) {
+          var idx = _users.indexOf(u);
+          var isSelf = u.username.toLowerCase() === currentUser.toLowerCase();
+          var roleBadge = u.role === 'admin'
+            ? '<span class="badge badge-primary badge-sm">Admin</span>'
+            : '<span class="badge badge-ghost badge-sm">Viewer</span>';
+          html += '<tr>';
+          html += '<td class="font-medium text-slate-500">' + (fi + 1) + '</td>';
+          html += '<td class="font-medium">' + escHtml(u.username) + (isSelf ? ' <span class="badge badge-xs badge-accent">You</span>' : '') + '</td>';
+          html += '<td>' + roleBadge + '</td>';
+          html += '<td class="flex gap-1">';
+          if (!isSelf) {
+            var newRole = u.role === 'admin' ? 'viewer' : 'admin';
+            var roleLabel = u.role === 'admin' ? 'Make Viewer' : 'Make Admin';
+            html += '<button class="btn btn-xs btn-info btn-outline btn-modern" onclick="changeRole(' + idx + ',\'' + newRole + '\')">' + roleLabel + '</button>';
+            html += '<button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="resetPassword(' + idx + ')">Reset Password</button>';
+            html += '<button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteUser(' + idx + ')">Delete</button>';
+          } else {
+            html += '<span class="text-xs text-base-content/40">Current session</span>';
+          }
+          html += '</td>';
+          html += '</tr>';
+          });
+          html += '</tbody></table>';
+          if (_userSearchTerm) {
+            html += '<div class="px-3 py-2 text-xs text-base-content/50 border-t border-base-200">Showing ' + filtered.length + ' of ' + _users.length + ' users</div>';
+          }
+          el.innerHTML = html;
+      }
+
+      function renderUsers() {
+        var el = document.getElementById('usersList');
+        el.innerHTML = '<div class="p-4 text-base-content/60 flex items-center gap-2"><span class="loading loading-spinner loading-sm"></span> Loading users...</div>';
+
+        fetchAppUsers('../').then(function(users) {
+          _users = users;
+          _renderUserTable();
+        });
+      }
+
+      function addUser() {
+        var errEl = document.getElementById('addUserError');
+        errEl.classList.add('hidden');
+        var username = document.getElementById('newUsername').value.trim().toLowerCase();
+        var password = document.getElementById('newPassword').value;
+        var role = document.getElementById('newRole').value;
+
+        if (!username || !password) {
+          errEl.textContent = 'Username and password are required.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        if (username.length < 3) {
+          errEl.textContent = 'Username must be at least 3 characters.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        if (password.length < 4) {
+          errEl.textContent = 'Password must be at least 4 characters.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        if (_users.some(function(u) { return u.username.toLowerCase() === username; })) {
+          errEl.textContent = 'Username already exists.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        _users.push({ username: username, password: password, role: role });
+        saveAppUsers(_users).then(function(res) {
+          document.getElementById('newUsername').value = '';
+          document.getElementById('newPassword').value = '';
+          document.getElementById('newRole').value = 'viewer';
+          renderUsers();
+        });
+      }
+
+      function deleteUser(idx) {
+        if (!_users[idx]) return;
+        if (!confirm('Delete user "' + _users[idx].username + '"?')) return;
+        _users.splice(idx, 1);
+        saveAppUsers(_users).then(function() { renderUsers(); });
+      }
+
+      function changeRole(idx, newRole) {
+        if (!_users[idx]) return;
+        _users[idx].role = newRole;
+        saveAppUsers(_users).then(function() { renderUsers(); });
+      }
+
+      function resetPassword(idx) {
+        if (!_users[idx]) return;
+        var newPass = prompt('Enter new password for "' + _users[idx].username + '":');
+        if (!newPass || newPass.length < 4) { alert('Password must be at least 4 characters.'); return; }
+        _users[idx].password = newPass;
+        saveAppUsers(_users).then(function() {
+          alert('Password updated.');
+        });
+      }
+
+      window.onload = function() {
+        if (!initPageAuth()) return;
+        if (!isAdmin()) {
+          document.getElementById('userPageContent').innerHTML = '<div class="alert alert-error mt-4">Access denied. Admin only.</div>';
+          return;
+        }
+        renderUsers();
+      };
+    </script>
+</body>
+</html>

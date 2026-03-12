@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - PO Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="page-bg min-h-screen">
+    <div class="drawer lg:drawer-open">
+      <input id="main-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content flex flex-col">
+        <!-- Navbar -->
+        <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
+          <div class="flex-none lg:hidden">
+            <label for="main-drawer" class="btn btn-square btn-ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </label>
+          </div>
+          <div class="flex-1 px-2">
+            <span class="page-title">Analytics</span>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="p-4 lg:p-6 animate-fadeIn">
+
+          <!-- Hero Header -->
+          <div class="page-hero bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 animate-slideDown">
+            <div class="hero-bg-blob w-64 h-64 bg-white" style="top:-40px;left:-20px;"></div>
+            <div class="hero-bg-blob w-48 h-48 bg-yellow-300" style="top:-20px;right:10%;"></div>
+            <div class="hero-bg-blob w-56 h-56 bg-cyan-300" style="bottom:-40px;right:-20px;"></div>
+            <div class="hero-content flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div class="flex items-center gap-3">
+                <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <div>
+                  <h1 class="hero-title text-2xl">Analytics & Reports</h1>
+                  <p class="hero-subtitle">Comprehensive insights into your purchase orders</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Date range filter -->
+                <div class="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <input type="date" id="dateFrom" class="bg-transparent text-white text-xs border-none outline-none cursor-pointer [color-scheme:dark]" />
+                  <span class="text-white/60 text-xs">to</span>
+                  <input type="date" id="dateTo" class="bg-transparent text-white text-xs border-none outline-none cursor-pointer [color-scheme:dark]" />
+                </div>
+                <button onclick="applyDateFilter()" class="btn btn-sm bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 btn-modern">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                  Filter
+                </button>
+                <button onclick="resetDateFilter()" class="btn btn-sm bg-white/10 backdrop-blur-sm border-white/20 text-white/80 hover:bg-white/20 btn-modern">Reset</button>
+                <button onclick="exportAnalyticsReport()" class="btn btn-sm bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 btn-modern">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  Export
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading Indicator -->
+          <div id="analyticsLoading" class="flex justify-center items-center py-16">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <span class="ml-3 text-sm text-slate-500">Loading analytics data...</span>
+          </div>
+
+          <!-- Analytics Content (hidden until data loads) -->
+          <div id="analyticsContent" class="hidden">
+
+            <!-- KPI Stats Row -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">Total POs</div>
+                  <div class="stat-card-value" id="kpiTotalPOs">0</div>
+                </div>
+              </div>
+              <div class="stat-card bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">Total Spend</div>
+                  <div class="stat-card-value text-lg" id="kpiTotalSpend">₹0</div>
+                </div>
+              </div>
+              <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">Avg PO Value</div>
+                  <div class="stat-card-value text-lg" id="kpiAvgPO">₹0</div>
+                </div>
+              </div>
+              <div class="stat-card bg-gradient-to-br from-orange-500 to-amber-500">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">This Month</div>
+                  <div class="stat-card-value" id="kpiThisMonth">0</div>
+                </div>
+              </div>
+              <div class="stat-card bg-gradient-to-br from-rose-500 to-pink-600">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">Vendors Used</div>
+                  <div class="stat-card-value" id="kpiVendors">0</div>
+                </div>
+              </div>
+              <div class="stat-card bg-gradient-to-br from-cyan-500 to-teal-600">
+                <div class="stat-card-blob"></div>
+                <div class="relative">
+                  <div class="stat-card-label">Max PO Value</div>
+                  <div class="stat-card-value text-lg" id="kpiMaxPO">₹0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Month Comparison Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-green-500 to-emerald-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">This Month vs Last Month</div>
+                    <div class="header-subtitle">Purchase order comparison</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4 text-center">
+                      <div class="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-1">This Month</div>
+                      <div class="text-2xl font-extrabold text-emerald-700" id="cmpThisCount">0</div>
+                      <div class="text-xs text-emerald-500 mt-1" id="cmpThisSpend">₹0</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200 rounded-xl p-4 text-center">
+                      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Last Month</div>
+                      <div class="text-2xl font-extrabold text-slate-700" id="cmpLastCount">0</div>
+                      <div class="text-xs text-slate-400 mt-1" id="cmpLastSpend">₹0</div>
+                    </div>
+                  </div>
+                  <div class="mt-3 text-center">
+                    <span id="cmpBadge" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Vendor Card -->
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-purple-500 to-violet-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">Top Vendors by Spend</div>
+                    <div class="header-subtitle">Highest value vendors</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div id="topVendorsCard" class="space-y-2.5"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+              <!-- Monthly Trend Chart -->
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">Monthly PO Trend</div>
+                    <div class="header-subtitle">Count & spend over months</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div style="height: 280px; position: relative;">
+                    <canvas id="chartMonthlyTrend"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vendor Spend Pie Chart -->
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-pink-500 to-rose-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">Spend by Vendor</div>
+                    <div class="header-subtitle">Vendor-wise distribution</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div style="height: 280px; position: relative;">
+                    <canvas id="chartVendorPie"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Second Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+              <!-- Monthly Spend Bar Chart -->
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">Monthly Spend Breakdown</div>
+                    <div class="header-subtitle">Total spend per month</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div style="height: 280px; position: relative;">
+                    <canvas id="chartMonthlySpend"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PO Count by Day of Week -->
+              <div class="modern-card">
+                <div class="card-header">
+                  <div class="header-icon bg-gradient-to-br from-teal-500 to-cyan-600 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                  <div>
+                    <div class="header-title">POs by Day of Week</div>
+                    <div class="header-subtitle">When are POs created most?</div>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div style="height: 280px; position: relative;">
+                    <canvas id="chartDayOfWeek"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vendor Analysis Table -->
+            <div class="modern-card mb-6">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Vendor-wise Analysis</div>
+                  <div class="header-subtitle">Detailed breakdown by vendor</div>
+                </div>
+                <div class="ml-auto">
+                  <div class="search-bar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="vendorAnalysisSearch" placeholder="Search vendors..." class="search-input" oninput="filterVendorTable(this.value)" />
+                  </div>
+                </div>
+              </div>
+              <div class="overflow-x-auto" id="vendorAnalysisTable"></div>
+            </div>
+
+            <!-- Item Analysis Table -->
+            <div class="modern-card mb-6">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Item-wise Analysis</div>
+                  <div class="header-subtitle">Most ordered items & spend</div>
+                </div>
+                <div class="ml-auto">
+                  <div class="search-bar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" id="itemAnalysisSearch" placeholder="Search items..." class="search-input" oninput="filterItemTable(this.value)" />
+                  </div>
+                </div>
+              </div>
+              <div class="overflow-x-auto" id="itemAnalysisTable"></div>
+            </div>
+
+            <!-- Recent POs Table -->
+            <div class="modern-card mb-6">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-sky-500 to-blue-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Recent Purchase Orders</div>
+                  <div class="header-subtitle">Last 10 POs created</div>
+                </div>
+              </div>
+              <div class="overflow-x-auto" id="recentPOsTable"></div>
+            </div>
+
+          </div><!-- /analyticsContent -->
+
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="drawer-side">
+        <label for="main-drawer" class="drawer-overlay"></label>
+        <aside class="modern-sidebar flex flex-col w-64 min-h-full">
+          <div class="sidebar-brand">
+            <div class="brand-title">PO Manager</div>
+            <div class="brand-subtitle">Ranga Electricals</div>
+          </div>
+          <ul class="menu menu-md flex-1">
+            <li><a href="../index.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
+              Dashboard
+            </a></li>
+            <li><a href="add-po.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              Create PO
+            </a></li>
+            <li><a href="po-list.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              Purchase Orders
+            </a></li>
+            <li><a href="analytics.html" class="active">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Analytics
+            </a></li>
+            <li><a href="vendor-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Vendor Master
+            </a></li>
+            <li><a href="item-master.html">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              Item Master
+            </a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+
+    <script src="../main.js"></script>
+    <script>
+    // ============================================================
+    // Analytics Page Logic
+    // ============================================================
+    var _allPOs = [];
+    var _filteredPOs = [];
+    var _vendorData = [];
+    var _itemData = [];
+    var _charts = {};
+
+    // ── Currency formatter ──
+    function fmtCurrency(n) {
+      n = parseFloat(n) || 0;
+      return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    function fmtCurrencyShort(n) {
+      n = parseFloat(n) || 0;
+      if (n >= 10000000) return '₹' + (n / 10000000).toFixed(1) + 'Cr';
+      if (n >= 100000) return '₹' + (n / 100000).toFixed(1) + 'L';
+      if (n >= 1000) return '₹' + (n / 1000).toFixed(1) + 'K';
+      return '₹' + n.toLocaleString('en-IN');
+    }
+
+    // ── Parse PO date to Date object ──
+    function parsePODate(d) {
+      if (!d) return null;
+      // Try ISO format (yyyy-mm-dd) or dd/mm/yyyy or dd-mm-yyyy
+      if (d.indexOf('-') > 3) return new Date(d); // yyyy-mm-dd
+      var parts = d.split(/[\/-]/);
+      if (parts.length === 3 && parts[2].length === 4) return new Date(parts[2], parts[1] - 1, parts[0]);
+      if (parts.length === 3 && parts[0].length === 4) return new Date(parts[0], parts[1] - 1, parts[2]);
+      return new Date(d);
+    }
+
+    // ── Get PO total (grand total with GST) ──
+    function getPOTotal(po) {
+      if (po.total) return parseFloat(po.total) || 0;
+      var items = [];
+      try { items = typeof po.items === 'string' ? JSON.parse(po.items) : (po.items || []); } catch(e) {}
+      var itemsTotal = items.reduce(function(s, i) { return s + (parseFloat(i.total) || 0); }, 0);
+      var transport = parseFloat(po.transport) || 0;
+      var sub = itemsTotal + transport;
+      var cgst = sub * (parseFloat(po.cgst_percent) || 0) / 100;
+      var sgst = sub * (parseFloat(po.sgst_percent) || 0) / 100;
+      return Math.round(sub + cgst + sgst);
+    }
+
+    // ── Get PO items array ──
+    function getPOItems(po) {
+      try { return typeof po.items === 'string' ? JSON.parse(po.items) : (po.items || []); } catch(e) { return []; }
+    }
+
+    // ── Month key (YYYY-MM) from date ──
+    function monthKey(d) {
+      var dt = parsePODate(d);
+      if (!dt || isNaN(dt)) return 'Unknown';
+      return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+    }
+    function monthLabel(key) {
+      if (key === 'Unknown') return key;
+      var parts = key.split('-');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[parseInt(parts[1]) - 1] + ' ' + parts[0];
+    }
+
+    // ============================================================
+    // DATA LOADING
+    // ============================================================
+    function loadAnalytics() {
+      fetchAll(function(data) {
+        if (!data || !data.pos) {
+          document.getElementById('analyticsLoading').innerHTML = '<div class="text-center py-16 text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg><div class="font-semibold">No data available</div><div class="text-sm mt-1">Create some purchase orders to see analytics</div></div>';
+          return;
+        }
+        _allPOs = data.pos;
+        _filteredPOs = _allPOs.slice();
+        document.getElementById('analyticsLoading').classList.add('hidden');
+        document.getElementById('analyticsContent').classList.remove('hidden');
+        renderAll();
+      });
+    }
+
+    function renderAll() {
+      computeKPIs();
+      computeMonthComparison();
+      computeTopVendors();
+      renderMonthlyTrendChart();
+      renderVendorPieChart();
+      renderMonthlySpendChart();
+      renderDayOfWeekChart();
+      renderVendorAnalysis();
+      renderItemAnalysis();
+      renderRecentPOs();
+    }
+
+    // ============================================================
+    // DATE FILTER
+    // ============================================================
+    function applyDateFilter() {
+      var from = document.getElementById('dateFrom').value;
+      var to = document.getElementById('dateTo').value;
+      if (!from && !to) { _filteredPOs = _allPOs.slice(); renderAll(); return; }
+      var fromDate = from ? new Date(from) : new Date('1970-01-01');
+      var toDate = to ? new Date(to + 'T23:59:59') : new Date('2099-12-31');
+      _filteredPOs = _allPOs.filter(function(po) {
+        var dt = parsePODate(po.po_date);
+        return dt && dt >= fromDate && dt <= toDate;
+      });
+      renderAll();
+      showToast('Filtered to ' + _filteredPOs.length + ' POs', 'info');
+    }
+    function resetDateFilter() {
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      _filteredPOs = _allPOs.slice();
+      renderAll();
+      showToast('Filter reset', 'info');
+    }
+
+    // ============================================================
+    // KPI STATS
+    // ============================================================
+    function computeKPIs() {
+      var pos = _filteredPOs;
+      var totalPOs = pos.length;
+      var totalSpend = 0;
+      var maxPO = 0;
+      var vendorSet = {};
+      var now = new Date();
+      var thisMonthCount = 0;
+
+      pos.forEach(function(po) {
+        var v = getPOTotal(po);
+        totalSpend += v;
+        if (v > maxPO) maxPO = v;
+        if (po.vendor_name) vendorSet[po.vendor_name.trim().toLowerCase()] = 1;
+        var dt = parsePODate(po.po_date);
+        if (dt && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear()) thisMonthCount++;
+      });
+
+      document.getElementById('kpiTotalPOs').textContent = totalPOs;
+      document.getElementById('kpiTotalSpend').textContent = fmtCurrencyShort(totalSpend);
+      document.getElementById('kpiAvgPO').textContent = totalPOs ? fmtCurrencyShort(totalSpend / totalPOs) : '₹0';
+      document.getElementById('kpiThisMonth').textContent = thisMonthCount;
+      document.getElementById('kpiVendors').textContent = Object.keys(vendorSet).length;
+      document.getElementById('kpiMaxPO').textContent = fmtCurrencyShort(maxPO);
+    }
+
+    // ============================================================
+    // MONTH COMPARISON
+    // ============================================================
+    function computeMonthComparison() {
+      var now = new Date();
+      var thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      var lastDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      var lastMonth = lastDate.getFullYear() + '-' + String(lastDate.getMonth() + 1).padStart(2, '0');
+
+      var thisCount = 0, thisSpend = 0, lastCount = 0, lastSpend = 0;
+      _filteredPOs.forEach(function(po) {
+        var mk = monthKey(po.po_date);
+        var v = getPOTotal(po);
+        if (mk === thisMonth) { thisCount++; thisSpend += v; }
+        if (mk === lastMonth) { lastCount++; lastSpend += v; }
+      });
+
+      document.getElementById('cmpThisCount').textContent = thisCount;
+      document.getElementById('cmpThisSpend').textContent = fmtCurrency(thisSpend);
+      document.getElementById('cmpLastCount').textContent = lastCount;
+      document.getElementById('cmpLastSpend').textContent = fmtCurrency(lastSpend);
+
+      var badge = document.getElementById('cmpBadge');
+      if (lastCount === 0 && thisCount > 0) {
+        badge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+        badge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> New activity this month';
+      } else if (thisCount >= lastCount) {
+        var pctChange = lastCount > 0 ? Math.round(((thisCount - lastCount) / lastCount) * 100) : 0;
+        badge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700';
+        badge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg> ' + (pctChange > 0 ? '+' + pctChange + '% ' : '') + 'up from last month';
+      } else {
+        var pctDown = lastCount > 0 ? Math.round(((lastCount - thisCount) / lastCount) * 100) : 0;
+        badge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700';
+        badge.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg> -' + pctDown + '% down from last month';
+      }
+    }
+
+    // ============================================================
+    // TOP VENDORS CARD
+    // ============================================================
+    function computeTopVendors() {
+      var vendorMap = {};
+      _filteredPOs.forEach(function(po) {
+        var name = (po.vendor_name || 'Unknown').trim();
+        if (!vendorMap[name]) vendorMap[name] = { count: 0, spend: 0 };
+        vendorMap[name].count++;
+        vendorMap[name].spend += getPOTotal(po);
+      });
+      var arr = Object.keys(vendorMap).map(function(k) { return { name: k, count: vendorMap[k].count, spend: vendorMap[k].spend }; });
+      arr.sort(function(a, b) { return b.spend - a.spend; });
+      var top5 = arr.slice(0, 5);
+      var maxSpend = top5.length ? top5[0].spend : 1;
+      var colors = ['from-blue-500 to-indigo-500', 'from-purple-500 to-violet-500', 'from-emerald-500 to-teal-500', 'from-amber-500 to-orange-500', 'from-pink-500 to-rose-500'];
+
+      var html = '';
+      top5.forEach(function(v, i) {
+        var pct = maxSpend > 0 ? Math.round((v.spend / maxSpend) * 100) : 0;
+        html += '<div class="flex items-center gap-3">'
+          + '<div class="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br ' + colors[i] + ' flex items-center justify-center text-white text-xs font-bold">' + (i + 1) + '</div>'
+          + '<div class="flex-1 min-w-0">'
+          + '<div class="flex justify-between items-baseline mb-0.5">'
+          + '<span class="text-sm font-semibold text-slate-700 truncate">' + escHtml(v.name) + '</span>'
+          + '<span class="text-xs font-bold text-slate-600 ml-2">' + fmtCurrency(v.spend) + '</span>'
+          + '</div>'
+          + '<div class="w-full bg-slate-100 rounded-full h-1.5">'
+          + '<div class="h-1.5 rounded-full bg-gradient-to-r ' + colors[i] + '" style="width:' + pct + '%;transition:width 0.8s ease"></div>'
+          + '</div>'
+          + '<div class="text-xs text-slate-400 mt-0.5">' + v.count + ' PO' + (v.count > 1 ? 's' : '') + '</div>'
+          + '</div>'
+          + '</div>';
+      });
+      if (!top5.length) html = '<div class="text-center text-sm text-slate-400 py-4">No vendor data</div>';
+      document.getElementById('topVendorsCard').innerHTML = html;
+    }
+
+    // ============================================================
+    // CHARTS
+    // ============================================================
+    var _chartColors = {
+      blue:    { bg: 'rgba(59,130,246,0.15)', border: 'rgb(59,130,246)' },
+      indigo:  { bg: 'rgba(99,102,241,0.15)', border: 'rgb(99,102,241)' },
+      purple:  { bg: 'rgba(139,92,246,0.15)',  border: 'rgb(139,92,246)' },
+      emerald: { bg: 'rgba(16,185,129,0.15)',  border: 'rgb(16,185,129)' },
+      amber:   { bg: 'rgba(245,158,11,0.15)',  border: 'rgb(245,158,11)' },
+      rose:    { bg: 'rgba(244,63,94,0.15)',   border: 'rgb(244,63,94)' },
+      teal:    { bg: 'rgba(20,184,166,0.15)',  border: 'rgb(20,184,166)' },
+      cyan:    { bg: 'rgba(6,182,212,0.15)',   border: 'rgb(6,182,212)' },
+      orange:  { bg: 'rgba(249,115,22,0.15)',  border: 'rgb(249,115,22)' },
+      pink:    { bg: 'rgba(236,72,153,0.15)',  border: 'rgb(236,72,153)' }
+    };
+    var _pieColors = [
+      'rgb(59,130,246)','rgb(139,92,246)','rgb(16,185,129)','rgb(245,158,11)',
+      'rgb(244,63,94)','rgb(20,184,166)','rgb(249,115,22)','rgb(236,72,153)',
+      'rgb(99,102,241)','rgb(6,182,212)','rgb(168,85,247)','rgb(234,179,8)'
+    ];
+
+    function destroyChart(key) {
+      if (_charts[key]) { _charts[key].destroy(); _charts[key] = null; }
+    }
+
+    // ── Monthly Trend (Line: count + bar: spend) ──
+    function renderMonthlyTrendChart() {
+      destroyChart('monthlyTrend');
+      var monthMap = {};
+      _filteredPOs.forEach(function(po) {
+        var mk = monthKey(po.po_date);
+        if (!monthMap[mk]) monthMap[mk] = { count: 0, spend: 0 };
+        monthMap[mk].count++;
+        monthMap[mk].spend += getPOTotal(po);
+      });
+      var keys = Object.keys(monthMap).sort();
+      var labels = keys.map(monthLabel);
+      var counts = keys.map(function(k) { return monthMap[k].count; });
+      var spends = keys.map(function(k) { return monthMap[k].spend; });
+
+      var ctx = document.getElementById('chartMonthlyTrend').getContext('2d');
+      _charts.monthlyTrend = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'line',
+              label: 'PO Count',
+              data: counts,
+              borderColor: _chartColors.blue.border,
+              backgroundColor: _chartColors.blue.bg,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointBackgroundColor: _chartColors.blue.border,
+              tension: 0.3,
+              yAxisID: 'y',
+              order: 0
+            },
+            {
+              type: 'bar',
+              label: 'Spend (₹)',
+              data: spends,
+              backgroundColor: _chartColors.indigo.bg,
+              borderColor: _chartColors.indigo.border,
+              borderWidth: 1,
+              borderRadius: 6,
+              yAxisID: 'y1',
+              order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 16, font: { size: 11, family: 'Inter' } } } },
+          scales: {
+            y: { position: 'left', beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' }, title: { display: true, text: 'Count', font: { size: 10 } } },
+            y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10 }, callback: function(v) { return fmtCurrencyShort(v); } }, title: { display: true, text: 'Spend', font: { size: 10 } } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ── Vendor Pie/Doughnut Chart ──
+    function renderVendorPieChart() {
+      destroyChart('vendorPie');
+      var vendorMap = {};
+      _filteredPOs.forEach(function(po) {
+        var name = (po.vendor_name || 'Unknown').trim();
+        vendorMap[name] = (vendorMap[name] || 0) + getPOTotal(po);
+      });
+      var arr = Object.keys(vendorMap).map(function(k) { return { name: k, spend: vendorMap[k] }; });
+      arr.sort(function(a, b) { return b.spend - a.spend; });
+      // Top 8 + Others
+      var topN = arr.slice(0, 8);
+      var othersSpend = arr.slice(8).reduce(function(s, v) { return s + v.spend; }, 0);
+      if (othersSpend > 0) topN.push({ name: 'Others', spend: othersSpend });
+
+      var ctx = document.getElementById('chartVendorPie').getContext('2d');
+      _charts.vendorPie = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: topN.map(function(v) { return v.name; }),
+          datasets: [{
+            data: topN.map(function(v) { return v.spend; }),
+            backgroundColor: _pieColors.slice(0, topN.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '55%',
+          plugins: {
+            legend: { position: 'right', labels: { usePointStyle: true, padding: 10, font: { size: 10, family: 'Inter' }, generateLabels: function(chart) {
+              var data = chart.data;
+              return data.labels.map(function(label, i) {
+                var val = data.datasets[0].data[i];
+                return { text: label + ' (' + fmtCurrencyShort(val) + ')', fillStyle: data.datasets[0].backgroundColor[i], strokeStyle: '#fff', lineWidth: 1, hidden: false, index: i, pointStyle: 'circle' };
+              });
+            } } },
+            tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + fmtCurrency(ctx.parsed); } } }
+          }
+        }
+      });
+    }
+
+    // ── Monthly Spend Bar Chart ──
+    function renderMonthlySpendChart() {
+      destroyChart('monthlySpend');
+      var monthMap = {};
+      _filteredPOs.forEach(function(po) {
+        var mk = monthKey(po.po_date);
+        monthMap[mk] = (monthMap[mk] || 0) + getPOTotal(po);
+      });
+      var keys = Object.keys(monthMap).sort();
+      var labels = keys.map(monthLabel);
+      var values = keys.map(function(k) { return monthMap[k]; });
+
+      var gradient_colors = values.map(function(v, i) { return _pieColors[i % _pieColors.length]; });
+
+      var ctx = document.getElementById('chartMonthlySpend').getContext('2d');
+      _charts.monthlySpend = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Total Spend',
+            data: values,
+            backgroundColor: gradient_colors.map(function(c) { return c.replace('rgb', 'rgba').replace(')', ',0.7)'); }),
+            borderColor: gradient_colors,
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: function(ctx) { return 'Spend: ' + fmtCurrency(ctx.parsed.y); } } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { font: { size: 10 }, callback: function(v) { return fmtCurrencyShort(v); } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ── Day of Week Chart ──
+    function renderDayOfWeekChart() {
+      destroyChart('dayOfWeek');
+      var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      var dayCounts = [0,0,0,0,0,0,0];
+      _filteredPOs.forEach(function(po) {
+        var dt = parsePODate(po.po_date);
+        if (dt && !isNaN(dt)) dayCounts[dt.getDay()]++;
+      });
+
+      var dayColors = [
+        'rgba(244,63,94,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)',
+        'rgba(139,92,246,0.7)','rgba(245,158,11,0.7)','rgba(20,184,166,0.7)','rgba(249,115,22,0.7)'
+      ];
+
+      var ctx = document.getElementById('chartDayOfWeek').getContext('2d');
+      _charts.dayOfWeek = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [{
+            label: 'PO Count',
+            data: dayCounts,
+            backgroundColor: dayColors,
+            borderColor: dayColors.map(function(c) { return c.replace('0.7', '1'); }),
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // VENDOR ANALYSIS TABLE
+    // ============================================================
+    var _vendorAnalysisAll = [];
+    function renderVendorAnalysis() {
+      var vendorMap = {};
+      _filteredPOs.forEach(function(po) {
+        var name = (po.vendor_name || 'Unknown').trim();
+        if (!vendorMap[name]) vendorMap[name] = { count: 0, spend: 0, lastDate: '' };
+        vendorMap[name].count++;
+        vendorMap[name].spend += getPOTotal(po);
+        if (po.po_date > vendorMap[name].lastDate) vendorMap[name].lastDate = po.po_date;
+      });
+      _vendorAnalysisAll = Object.keys(vendorMap).map(function(k) {
+        return { name: k, count: vendorMap[k].count, spend: vendorMap[k].spend, lastDate: vendorMap[k].lastDate };
+      }).sort(function(a, b) { return b.spend - a.spend; });
+      renderVendorTable(_vendorAnalysisAll);
+    }
+    function renderVendorTable(data) {
+      var totalSpend = data.reduce(function(s, v) { return s + v.spend; }, 0);
+      var html = '<table class="table table-zebra w-full">';
+      html += '<thead><tr><th>#</th><th>Vendor Name</th><th class="text-right">PO Count</th><th class="text-right">Total Spend</th><th class="text-right">% of Total</th><th>Last PO Date</th></tr></thead><tbody>';
+      if (!data.length) {
+        html += '<tr><td colspan="6" class="text-center py-8 text-slate-400">No vendor data</td></tr>';
+      }
+      data.forEach(function(v, i) {
+        var pct = totalSpend > 0 ? ((v.spend / totalSpend) * 100).toFixed(1) : '0.0';
+        html += '<tr><td class="font-mono text-xs text-slate-400">' + (i + 1) + '</td>'
+          + '<td class="font-semibold">' + escHtml(v.name) + '</td>'
+          + '<td class="text-right"><span class="badge badge-sm badge-ghost">' + v.count + '</span></td>'
+          + '<td class="text-right font-mono font-semibold">' + fmtCurrency(v.spend) + '</td>'
+          + '<td class="text-right">'
+          + '<div class="flex items-center justify-end gap-2">'
+          + '<div class="w-16 bg-slate-100 rounded-full h-1.5"><div class="h-1.5 rounded-full bg-indigo-500" style="width:' + pct + '%;"></div></div>'
+          + '<span class="text-xs text-slate-500">' + pct + '%</span>'
+          + '</div></td>'
+          + '<td class="text-xs text-slate-500">' + (v.lastDate || '-') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('vendorAnalysisTable').innerHTML = html;
+    }
+    function filterVendorTable(q) {
+      var filtered = _vendorAnalysisAll.filter(function(v) { return v.name.toLowerCase().indexOf(q.toLowerCase()) !== -1; });
+      renderVendorTable(filtered);
+    }
+
+    // ============================================================
+    // ITEM ANALYSIS TABLE
+    // ============================================================
+    var _itemAnalysisAll = [];
+    function renderItemAnalysis() {
+      var itemMap = {};
+      _filteredPOs.forEach(function(po) {
+        var items = getPOItems(po);
+        items.forEach(function(item) {
+          var desc = (item.desc || 'Unknown').trim();
+          if (!itemMap[desc]) itemMap[desc] = { count: 0, qty: 0, spend: 0 };
+          itemMap[desc].count++;
+          itemMap[desc].qty += parseInt(item.qty) || 0;
+          itemMap[desc].spend += parseFloat(item.total) || 0;
+        });
+      });
+      _itemAnalysisAll = Object.keys(itemMap).map(function(k) {
+        return { desc: k, count: itemMap[k].count, qty: itemMap[k].qty, spend: itemMap[k].spend };
+      }).sort(function(a, b) { return b.spend - a.spend; });
+      renderItemTable(_itemAnalysisAll);
+    }
+    function renderItemTable(data) {
+      var html = '<table class="table table-zebra w-full">';
+      html += '<thead><tr><th>#</th><th>Item Description</th><th class="text-right">Times Ordered</th><th class="text-right">Total Qty</th><th class="text-right">Total Spend</th><th class="text-right">Avg Unit Cost</th></tr></thead><tbody>';
+      if (!data.length) {
+        html += '<tr><td colspan="6" class="text-center py-8 text-slate-400">No item data</td></tr>';
+      }
+      data.forEach(function(item, i) {
+        var avgCost = item.qty > 0 ? item.spend / item.qty : 0;
+        html += '<tr><td class="font-mono text-xs text-slate-400">' + (i + 1) + '</td>'
+          + '<td class="font-semibold">' + escHtml(item.desc) + '</td>'
+          + '<td class="text-right"><span class="badge badge-sm badge-ghost">' + item.count + '</span></td>'
+          + '<td class="text-right font-mono">' + item.qty + '</td>'
+          + '<td class="text-right font-mono font-semibold">' + fmtCurrency(item.spend) + '</td>'
+          + '<td class="text-right font-mono text-slate-500">' + fmtCurrency(avgCost) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('itemAnalysisTable').innerHTML = html;
+    }
+    function filterItemTable(q) {
+      var filtered = _itemAnalysisAll.filter(function(v) { return v.desc.toLowerCase().indexOf(q.toLowerCase()) !== -1; });
+      renderItemTable(filtered);
+    }
+
+    // ============================================================
+    // RECENT POs TABLE
+    // ============================================================
+    function renderRecentPOs() {
+      var sorted = _filteredPOs.slice().sort(function(a, b) {
+        var da = parsePODate(a.po_date), db = parsePODate(b.po_date);
+        if (!da) return 1; if (!db) return -1;
+        return db - da;
+      });
+      var recent = sorted.slice(0, 10);
+      var html = '<table class="table table-zebra w-full">';
+      html += '<thead><tr><th>PO No</th><th>Date</th><th>Vendor</th><th>Client/Event</th><th class="text-right">Total</th><th>Actions</th></tr></thead><tbody>';
+      if (!recent.length) {
+        html += '<tr><td colspan="6" class="text-center py-8 text-slate-400">No purchase orders</td></tr>';
+      }
+      recent.forEach(function(po) {
+        html += '<tr>'
+          + '<td><span class="font-mono font-semibold text-indigo-600">' + escHtml(po.po_no || '-') + '</span></td>'
+          + '<td class="text-sm">' + escHtml(po.po_date || '-') + '</td>'
+          + '<td class="font-medium">' + escHtml(po.vendor_name || '-') + '</td>'
+          + '<td class="text-sm text-slate-500">' + escHtml(po.client_name || po.event_name || '-') + '</td>'
+          + '<td class="text-right font-mono font-semibold">' + fmtCurrency(getPOTotal(po)) + '</td>'
+          + '<td><a href="po-view.html?id=' + encodeURIComponent(po.po_id || '') + '" class="btn btn-xs btn-ghost text-indigo-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a></td>'
+          + '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('recentPOsTable').innerHTML = html;
+    }
+
+    // ============================================================
+    // EXPORT REPORT
+    // ============================================================
+    function exportAnalyticsReport() {
+      if (!window.XLSX) { showToast('Export library not loaded', 'error'); return; }
+      var wb = XLSX.utils.book_new();
+
+      // Sheet 1: Summary
+      var summaryData = [
+        ['Analytics Report - PO Manager'],
+        ['Generated', new Date().toLocaleString()],
+        ['Total POs', _filteredPOs.length],
+        [''],
+        ['Metric', 'Value'],
+        ['Total Spend', _filteredPOs.reduce(function(s, po) { return s + getPOTotal(po); }, 0)],
+        ['Average PO Value', _filteredPOs.length ? Math.round(_filteredPOs.reduce(function(s, po) { return s + getPOTotal(po); }, 0) / _filteredPOs.length) : 0],
+        ['Unique Vendors', (function() { var s = {}; _filteredPOs.forEach(function(po) { if (po.vendor_name) s[po.vendor_name.trim()] = 1; }); return Object.keys(s).length; })()]
+      ];
+      var ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
+
+      // Sheet 2: Vendor Analysis
+      var vendorRows = [['Vendor Name', 'PO Count', 'Total Spend', '% of Total']];
+      var totalSpend = _vendorAnalysisAll.reduce(function(s, v) { return s + v.spend; }, 0);
+      _vendorAnalysisAll.forEach(function(v) {
+        vendorRows.push([v.name, v.count, v.spend, totalSpend > 0 ? ((v.spend / totalSpend) * 100).toFixed(1) + '%' : '0%']);
+      });
+      var ws2 = XLSX.utils.aoa_to_sheet(vendorRows);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Vendor Analysis');
+
+      // Sheet 3: Item Analysis
+      var itemRows = [['Item Description', 'Times Ordered', 'Total Qty', 'Total Spend', 'Avg Unit Cost']];
+      _itemAnalysisAll.forEach(function(item) {
+        itemRows.push([item.desc, item.count, item.qty, item.spend, item.qty > 0 ? Math.round(item.spend / item.qty) : 0]);
+      });
+      var ws3 = XLSX.utils.aoa_to_sheet(itemRows);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Item Analysis');
+
+      // Sheet 4: All PO Data
+      var poRows = [['PO No', 'Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Total']];
+      _filteredPOs.forEach(function(po) {
+        poRows.push([po.po_no, po.po_date, po.vendor_name, po.client_name, po.event_name, po.event_location, po.event_date, getPOTotal(po)]);
+      });
+      var ws4 = XLSX.utils.aoa_to_sheet(poRows);
+      XLSX.utils.book_append_sheet(wb, ws4, 'All POs');
+
+      XLSX.writeFile(wb, 'PO_Analytics_Report_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+      showToast('Report exported successfully!', 'success');
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    window.onload = function() {
+      if (!initPageAuth()) return;
+      loadAnalytics();
+    };
+    </script>
+</body>
+</html>
