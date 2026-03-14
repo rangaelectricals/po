@@ -2,7 +2,7 @@
 // main.js - PO Manager - Shared Logic
 // Replace 'YOUR_GOOGLE_SCRIPT_URL' with your deployed Google Apps Script Web App URL
 // ============================================================
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx4V3wD2cM8dF2tz0mD2DJUFyJLLAfji-7yHJKNuqNHLZP30ylkmBJG_gB3serhxNg/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzigYT3lF6uQnnVO6boHFr54vKkmEEccKx_gCuc4b7wtF2zmcRcoynFszc40lkLLRxH/exec';
 
 // ============================================================
 // AUTH & SESSION MANAGEMENT
