@@ -6,6 +6,7 @@
     <title>Vendor Master - PO Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body class="page-bg min-h-screen">
@@ -45,7 +46,7 @@
           </div>
 
           <!-- Add Vendor Card -->
-          <div class="modern-card mb-6 crud-action animate-fadeIn">
+          <div class="modern-card mb-6 crud-action animate-fadeIn" data-master-edit>
             <div class="card-header">
               <div class="header-icon bg-gradient-to-br from-violet-500 to-purple-600 text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
@@ -64,6 +65,16 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                   Add Vendor
                 </button>
+              </div>
+              <div class="mt-3 flex flex-wrap items-center gap-2" data-master-bulk>
+                <input id="vendorBulkFile" type="file" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleVendorBulkFile(this)">
+                <button type="button" class="btn btn-outline btn-sm" onclick="triggerVendorBulkUpload()">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                  Bulk Upload Vendors
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="downloadBulkSample('vendor','csv')">Sample CSV</button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="downloadBulkSample('vendor','xlsx')">Sample Excel</button>
+                <span class="text-xs text-base-content/60">Columns: <code>name</code>, <code>address</code>, <code>gstin</code></span>
               </div>
             </div>
           </div>

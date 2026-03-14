@@ -136,16 +136,33 @@ function doPost(e) {
     case 'add_vendor':
       result = addVendor(body);
       break;
+    case 'update_vendor':
+      result = updateVendor(body);
+      break;
     case 'delete_vendor':
       result = deleteVendor(body);
+      break;
+    case 'bulk_upsert_vendors':
+      result = bulkUpsertVendors(body.rows || []);
       break;
 
     // --- ITEMS ---
     case 'add_item':
       result = addItem(body);
       break;
+    case 'update_item':
+      result = updateItem(body);
+      break;
     case 'delete_item':
       result = deleteItem(body);
+      break;
+    case 'bulk_upsert_items':
+      result = bulkUpsertItems(body.rows || []);
+      break;
+
+    // --- BULK POs ---
+    case 'bulk_upsert_pos':
+      result = bulkUpsertPOs(body.rows || []);
       break;
 
     // --- USERS ---
@@ -427,6 +444,70 @@ function deleteVendor(body) {
   return { success: true };
 }
 
+function updateVendor(body) {
+  const sheet = getSheet_(SHEET_VENDORS);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const idx = parseInt(body.idx, 10);
+  if (isNaN(idx) || idx < 0) return { success: false, error: 'Invalid index' };
+
+  const name = String(body.name || '').trim();
+  const address = String(body.address || '').trim();
+  const gstin = String(body.gstin || '').trim();
+  if (!name) return { success: false, error: 'Vendor name is required' };
+
+  const rowNum = idx + 2;
+  if (rowNum > sheet.getLastRow()) return { success: false, error: 'Index out of range' };
+
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (i === idx + 1) continue;
+    if (String(rows[i][0] || '').trim().toLowerCase() === name.toLowerCase()) {
+      return { success: false, error: 'Another vendor already uses this name' };
+    }
+  }
+
+  sheet.getRange(rowNum, 1, 1, 3).setValues([[name, address, gstin]]);
+  return { success: true };
+}
+
+function bulkUpsertVendors(rows) {
+  if (!Array.isArray(rows)) return { success: false, error: 'Invalid rows payload' };
+  const sheet = getSheet_(SHEET_VENDORS);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const existing = readVendors();
+  const indexByName = {};
+  existing.forEach(function(v, i) {
+    const key = String(v.name || '').trim().toLowerCase();
+    if (key) indexByName[key] = i + 2;
+  });
+
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  rows.forEach(function(r) {
+    const name = String((r && r.name) || '').trim();
+    if (!name) { skipped++; return; }
+    const address = String((r && r.address) || '').trim();
+    const gstin = String((r && r.gstin) || '').trim();
+    const key = name.toLowerCase();
+
+    if (indexByName[key]) {
+      sheet.getRange(indexByName[key], 1, 1, 3).setValues([[name, address, gstin]]);
+      updated++;
+    } else {
+      sheet.appendRow([name, address, gstin]);
+      const newRow = sheet.getLastRow();
+      indexByName[key] = newRow;
+      added++;
+    }
+  });
+
+  return { success: true, added: added, updated: updated, skipped: skipped };
+}
+
 // ============================================================
 // ITEMS
 // ============================================================
@@ -477,6 +558,156 @@ function deleteItem(body) {
   return { success: true };
 }
 
+function updateItem(body) {
+  const sheet = getSheet_(SHEET_ITEMS);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const idx = parseInt(body.idx, 10);
+  if (isNaN(idx) || idx < 0) return { success: false, error: 'Invalid index' };
+
+  const desc = String(body.desc || '').trim();
+  const uom = String(body.uom || '').trim();
+  const rate = parseFloat(body.rate) || 0;
+  const default_qty = parseInt(body.default_qty, 10) || 1;
+  if (!desc || !uom) return { success: false, error: 'Description and UOM required' };
+
+  const rowNum = idx + 2;
+  if (rowNum > sheet.getLastRow()) return { success: false, error: 'Index out of range' };
+
+  sheet.getRange(rowNum, 1, 1, 4).setValues([[desc, uom, rate, default_qty]]);
+  return { success: true };
+}
+
+function bulkUpsertItems(rows) {
+  if (!Array.isArray(rows)) return { success: false, error: 'Invalid rows payload' };
+  const sheet = getSheet_(SHEET_ITEMS);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const existing = readItems();
+  const indexByKey = {};
+  existing.forEach(function(it, i) {
+    const key = (String(it.desc || '').trim() + '|' + String(it.uom || '').trim()).toLowerCase();
+    if (key !== '|') indexByKey[key] = i + 2;
+  });
+
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  rows.forEach(function(r) {
+    const desc = String((r && r.desc) || '').trim();
+    const uom = String((r && r.uom) || '').trim() || 'NOS';
+    if (!desc) { skipped++; return; }
+
+    const rate = parseFloat((r && r.rate) || 0) || 0;
+    const defaultQty = parseInt((r && r.default_qty), 10) || 1;
+    const key = (desc + '|' + uom).toLowerCase();
+
+    if (indexByKey[key]) {
+      sheet.getRange(indexByKey[key], 1, 1, 4).setValues([[desc, uom, rate, defaultQty]]);
+      updated++;
+    } else {
+      sheet.appendRow([desc, uom, rate, defaultQty]);
+      const newRow = sheet.getLastRow();
+      indexByKey[key] = newRow;
+      added++;
+    }
+  });
+
+  return { success: true, added: added, updated: updated, skipped: skipped };
+}
+
+function calcGrandTotal_(items, transport, cgstPct, sgstPct) {
+  const itemTotal = (items || []).reduce(function(sum, item) {
+    return sum + (parseFloat(item.total) || 0);
+  }, 0);
+  const subtotal = itemTotal + (parseFloat(transport) || 0);
+  const cgstAmt = Math.round(subtotal * (parseFloat(cgstPct) || 0) / 100);
+  const sgstAmt = Math.round(subtotal * (parseFloat(sgstPct) || 0) / 100);
+  return subtotal + cgstAmt + sgstAmt;
+}
+
+function bulkUpsertPOs(rows) {
+  if (!Array.isArray(rows)) return { success: false, error: 'Invalid rows payload' };
+  const sheet = getSheet_(SHEET_PO);
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  const existingRows = sheet.getDataRange().getValues();
+  if (existingRows.length === 0) return { success: false, error: 'PO sheet is not initialized' };
+
+  const headers = existingRows[0];
+  const poNoCol = headers.indexOf('po_no');
+  const poIdCol = headers.indexOf('po_id');
+  const createdAtCol = headers.indexOf('created_at');
+
+  const rowByPoNo = {};
+  for (let i = 1; i < existingRows.length; i++) {
+    const poNo = String(existingRows[i][poNoCol] || '').trim();
+    if (poNo) rowByPoNo[poNo.toLowerCase()] = i + 1;
+  }
+
+  let added = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  rows.forEach(function(r) {
+    const poNo = String((r && r.po_no) || '').trim();
+    const poDate = String((r && r.po_date) || '').trim();
+    const vendorName = String((r && r.vendor_name) || '').trim();
+    if (!poNo || !poDate || !vendorName) { skipped++; return; }
+
+    const items = Array.isArray(r.items) ? r.items : [];
+    const transport = parseFloat((r && r.transport) || 0) || 0;
+    const cgstPct = parseFloat((r && r.cgst_percent) || 0) || 0;
+    const sgstPct = parseFloat((r && r.sgst_percent) || 0) || 0;
+    const total = (r && r.total !== undefined && r.total !== null && r.total !== '')
+      ? (parseFloat(r.total) || 0)
+      : calcGrandTotal_(items, transport, cgstPct, sgstPct);
+
+    const key = poNo.toLowerCase();
+    const targetRow = rowByPoNo[key];
+
+    let poId = Utilities.getUuid();
+    let createdAt = new Date();
+    if (targetRow) {
+      poId = existingRows[targetRow - 1][poIdCol] || poId;
+      createdAt = existingRows[targetRow - 1][createdAtCol] || createdAt;
+    }
+
+    const out = [
+      poId,
+      poNo,
+      poDate,
+      vendorName,
+      String((r && r.vendor_address) || '').trim(),
+      String((r && r.vendor_gstin) || '').trim(),
+      String((r && r.client_name) || '').trim(),
+      String((r && r.event_name) || '').trim(),
+      String((r && r.event_location) || '').trim(),
+      String((r && r.event_date) || '').trim(),
+      JSON.stringify(items),
+      transport,
+      cgstPct,
+      sgstPct,
+      String((r && r.terms) || '').trim(),
+      total,
+      createdAt
+    ];
+
+    if (targetRow) {
+      sheet.getRange(targetRow, 1, 1, out.length).setValues([out]);
+      updated++;
+    } else {
+      sheet.appendRow(out);
+      const newRow = sheet.getLastRow();
+      rowByPoNo[key] = newRow;
+      added++;
+    }
+  });
+
+  return { success: true, added: added, updated: updated, skipped: skipped };
+}
+
 // ============================================================
 // USERS
 // ============================================================
@@ -502,7 +733,7 @@ function readUsers() {
     if (rows[i][0]) {
       data.push({
         username: String(rows[i][0]).trim(),
-        password: String(rows[i][1]),
+        password: String(rows[i][1]).trim(),
         role: String(rows[i][2]).trim() || 'viewer'
       });
     }

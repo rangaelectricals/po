@@ -11,16 +11,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="../seal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <!-- SheetJS for Excel export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="page-bg min-h-screen">
-    <div class="drawer lg:drawer-open">
+    <div class="drawer">
       <input id="main-drawer" type="checkbox" class="drawer-toggle" />
       <div class="drawer-content flex flex-col">
         <!-- Header -->
         <div class="w-full navbar modern-navbar sticky top-0 z-30 px-4">
-          <div class="flex-none lg:hidden">
+          <div class="flex-none">
             <label for="main-drawer" class="btn btn-square btn-ghost">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </label>
@@ -381,56 +382,11 @@
       // ---- Excel Download ----
       function downloadExcel() {
         if (!currentPO) return;
-        const po = currentPO;
-        const items = po._items || [];
-        const transport = parseFloat(po.transport) || 0;
-        const itemsTotal = items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
-        const subtotal = itemsTotal + transport;
-        const cgstPct = parseFloat(po.cgst_percent) || 0;
-        const sgstPct = parseFloat(po.sgst_percent) || 0;
-        const cgstAmt = Math.round(subtotal * cgstPct / 100);
-        const sgstAmt = Math.round(subtotal * sgstPct / 100);
-        const grandTotal = po.total || (subtotal + cgstAmt + sgstAmt);
-        const totalQty = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
-
-        const rows = [];
-        rows.push(['RANGA ELECTRICALS PVT LTD']);
-        rows.push(['NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.']);
-        rows.push(['GST IN: 33AAHCR4037J1ZD']);
-        rows.push([]);
-        rows.push(['PURCHASE ORDER']);
-        rows.push([]);
-        rows.push(['To:', po.vendor_name || '', '', 'PO NO:', po.po_no || '']);
-        if (po.vendor_address) rows.push(['', po.vendor_address, '', 'DATE:', po.po_date || '']);
-        else rows.push(['', '', '', 'DATE:', po.po_date || '']);
-        if (po.vendor_gstin) rows.push(['GSTIN:', po.vendor_gstin]);
-        rows.push([]);
-        if (po.client_name) rows.push(['Client Name:', 'M/s. ' + po.client_name]);
-        if (po.event_date) rows.push(['Event Date:', po.event_date]);
-        rows.push([]);
-        rows.push(['Sl.No', 'Item Description', 'Quantity', 'UOM', 'Per Day Amount', 'No of Days', 'Total Value (INR)']);
-        items.forEach(function(item, idx) {
-          rows.push([idx + 1, item.desc || '', item.qty || '', item.uom || '', item.per_day || 0, item.days || 0, item.total || 0]);
-        });
-        if (transport > 0) {
-          rows.push([items.length + 1, 'TRANSPORT CHARGES', '', '', '', '', transport]);
+        if (typeof downloadPOExcelFromObject === 'function') {
+          downloadPOExcelFromObject(currentPO);
+          return;
         }
-        rows.push([]);
-        rows.push(['', 'Total', totalQty, '', '', '', subtotal]);
-        if (cgstPct) rows.push(['', '', '', '', '', 'Add : CGST @ ' + cgstPct + '%', cgstAmt]);
-        if (sgstPct) rows.push(['', '', '', '', '', 'Add : SGST @ ' + sgstPct + '%', sgstAmt]);
-        rows.push(['', '', '', '', '', 'GRAND TOTAL', grandTotal]);
-        rows.push([]);
-        if (po.terms) rows.push(['TERMS OF PAYMENT:', po.terms]);
-        rows.push([]);
-        rows.push(['EVENT LOCATION:', po.event_name || '']);
-        if (po.event_location) rows.push(['', po.event_location]);
-
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols'] = [{ wch: 8 }, { wch: 38 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 20 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'PurchaseOrder');
-        XLSX.writeFile(wb, 'PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.xlsx');
+        showToast('Excel export is not available on this page.', 'error');
       }
 
       window.onload = function() {

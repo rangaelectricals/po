@@ -2,7 +2,7 @@
 // main.js - PO Manager - Shared Logic
 // Replace 'YOUR_GOOGLE_SCRIPT_URL' with your deployed Google Apps Script Web App URL
 // ============================================================
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzigYT3lF6uQnnVO6boHFr54vKkmEEccKx_gCuc4b7wtF2zmcRcoynFszc40lkLLRxH/exec';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx4V3wD2cM8dF2tz0mD2DJUFyJLLAfji-7yHJKNuqNHLZP30ylkmBJG_gB3serhxNg/exec';
 
 // ============================================================
 // AUTH & SESSION MANAGEMENT
@@ -50,6 +50,29 @@ function isAdmin() {
     return s && s.role === 'admin';
 }
 
+function getSessionRole() {
+    var s = getSession();
+    return (s && s.role ? String(s.role).toLowerCase() : 'viewer');
+}
+
+function canManagePO() {
+    var role = getSessionRole();
+    return role === 'admin' || role === 'editor';
+}
+
+function canManageMasters() {
+    var role = getSessionRole();
+    return role === 'admin' || role === 'editor';
+}
+
+function canBulkUploadPO() {
+    return canManagePO();
+}
+
+function canBulkUploadMasters() {
+    return canManageMasters();
+}
+
 function getSessionUser() {
     var s = getSession();
     return s ? s.username : '';
@@ -72,29 +95,50 @@ function requireAuth() {
 
 // Apply role-based UI restrictions after page renders
 function applyRoleRestrictions() {
-    if (isAdmin()) return; // Admin sees everything
+    var isAdminRole = isAdmin();
+    var canPO = canManagePO();
+    var canMaster = canManageMasters();
 
-    // Hide all elements marked as admin-only
-    document.querySelectorAll('[data-admin-only]').forEach(function(el) {
-        el.style.display = 'none';
-    });
+    if (!isAdminRole) {
+        // Hide all elements marked as admin-only
+        document.querySelectorAll('[data-admin-only], .admin-only').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
 
-    // Hide elements with class .admin-only
-    document.querySelectorAll('.admin-only').forEach(function(el) {
-        el.style.display = 'none';
-    });
+    if (!canMaster) {
+        document.querySelectorAll('[data-master-edit]').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
 
-    // Disable all form submit/add/delete buttons (non-admin = view only)
-    document.querySelectorAll('.crud-action').forEach(function(el) {
-        el.style.display = 'none';
-    });
+    if (!canBulkUploadMasters()) {
+        document.querySelectorAll('[data-master-bulk]').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
 
-    // Hide "Create PO" sidebar link for non-admin
-    document.querySelectorAll('.menu a').forEach(function(a) {
-        if (a.getAttribute('href') && (a.getAttribute('href').indexOf('add-po') !== -1)) {
-            a.closest('li').style.display = 'none';
-        }
-    });
+    if (!canPO) {
+        document.querySelectorAll('[data-po-edit]').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
+
+    if (!canBulkUploadPO()) {
+        document.querySelectorAll('[data-po-bulk]').forEach(function(el) {
+            el.style.display = 'none';
+        });
+    }
+
+    // Hide "Create PO" sidebar link for users without PO edit rights
+    if (!canPO) {
+        document.querySelectorAll('.menu a').forEach(function(a) {
+            if (a.getAttribute('href') && (a.getAttribute('href').indexOf('add-po') !== -1)) {
+                var li = a.closest('li');
+                if (li) li.style.display = 'none';
+            }
+        });
+    }
 }
 
 // Inject user info + logout into the navbar
@@ -599,6 +643,241 @@ function fetchAll(callback) {
     });
 }
 
+// Read first worksheet from CSV/XLS/XLSX and return rows as key-value objects.
+function readSpreadsheetRows(file, onSuccess) {
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+        showToast('Excel library is not loaded on this page.', 'error');
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = e.target.result;
+            var wb = XLSX.read(data, { type: 'array' });
+            var sheetName = wb.SheetNames[0];
+            var ws = wb.Sheets[sheetName];
+            var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            onSuccess(rows);
+        } catch (err) {
+            showToast('Unable to read file: ' + err.message, 'error');
+        }
+    };
+    reader.onerror = function() {
+        showToast('Unable to read file.', 'error');
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function ensureEditPopupModal_() {
+    var dlg = document.getElementById('appEditPopup');
+    if (dlg) return dlg;
+
+    dlg = document.createElement('dialog');
+    dlg.id = 'appEditPopup';
+    dlg.className = 'modal modal-bottom sm:modal-middle';
+    dlg.innerHTML = ''
+        + '<div class="modal-box max-w-xl">'
+        + '  <h3 id="appEditPopupTitle" class="font-bold text-lg">Edit</h3>'
+        + '  <form id="appEditPopupForm" class="mt-4 space-y-3"></form>'
+        + '  <div class="modal-action">'
+        + '    <button type="button" id="appEditPopupCancel" class="btn btn-ghost">Cancel</button>'
+        + '    <button type="button" id="appEditPopupSave" class="btn btn-primary">Save</button>'
+        + '  </div>'
+        + '</div>'
+        + '<form method="dialog" class="modal-backdrop"><button>close</button></form>';
+    document.body.appendChild(dlg);
+    return dlg;
+}
+
+function showEditPopup_(opts) {
+    return new Promise(function(resolve) {
+        var dlg = ensureEditPopupModal_();
+        var titleEl = document.getElementById('appEditPopupTitle');
+        var formEl = document.getElementById('appEditPopupForm');
+        var btnSave = document.getElementById('appEditPopupSave');
+        var btnCancel = document.getElementById('appEditPopupCancel');
+
+        titleEl.textContent = opts.title || 'Edit';
+        formEl.innerHTML = (opts.fields || []).map(function(f) {
+            var type = f.type || 'text';
+            var value = (f.value === undefined || f.value === null) ? '' : String(f.value);
+            var req = f.required ? ' required' : '';
+            var placeholder = f.placeholder ? (' placeholder="' + escHtml(String(f.placeholder)) + '"') : '';
+            if (type === 'textarea') {
+                return ''
+                    + '<div class="form-control">'
+                    + '  <label class="label"><span class="label-text font-medium">' + escHtml(f.label || f.name) + '</span></label>'
+                    + '  <textarea class="textarea textarea-bordered" name="' + escHtml(f.name) + '"' + req + placeholder + '>' + escHtml(value) + '</textarea>'
+                    + '</div>';
+            }
+            return ''
+                + '<div class="form-control">'
+                + '  <label class="label"><span class="label-text font-medium">' + escHtml(f.label || f.name) + '</span></label>'
+                + '  <input class="input input-bordered" type="' + escHtml(type) + '" name="' + escHtml(f.name) + '" value="' + escHtml(value) + '"' + req + placeholder + '>'
+                + '</div>';
+        }).join('');
+
+        function cleanup() {
+            btnSave.onclick = null;
+            btnCancel.onclick = null;
+            dlg.onclose = null;
+        }
+
+        btnCancel.onclick = function() {
+            cleanup();
+            dlg.close();
+            resolve(null);
+        };
+
+        btnSave.onclick = function() {
+            var data = {};
+            var valid = true;
+            (opts.fields || []).forEach(function(f) {
+                var el = formEl.querySelector('[name="' + f.name + '"]');
+                if (!el) return;
+                var val = String(el.value || '').trim();
+                if (f.required && !val) valid = false;
+                data[f.name] = val;
+            });
+            if (!valid) {
+                showToast('Please fill all required fields.', 'warning');
+                return;
+            }
+            cleanup();
+            dlg.close();
+            resolve(data);
+        };
+
+        dlg.onclose = function() {
+            cleanup();
+        };
+
+        dlg.showModal();
+    });
+}
+
+function _downloadCsvFile_(fileName, headers, rows) {
+    var esc = function(v) {
+        var s = String(v === undefined || v === null ? '' : v);
+        if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    };
+    var csv = [headers.map(esc).join(',')]
+        .concat((rows || []).map(function(r) { return r.map(esc).join(','); }))
+        .join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 500);
+}
+
+async function _downloadXlsxFile_(fileName, sheetName, headers, rows) {
+    if (typeof ExcelJS !== 'undefined') {
+        try {
+            var wbStyled = new ExcelJS.Workbook();
+            var wsStyled = wbStyled.addWorksheet(sheetName || 'Sample');
+            var dataRows = rows || [];
+
+            wsStyled.columns = (headers || []).map(function(h) {
+                var width = Math.max(12, String(h || '').length + 4);
+                return { width: width };
+            });
+
+            wsStyled.addRow(headers || []);
+            var hr = wsStyled.getRow(1);
+            hr.height = 22;
+            hr.eachCell(function(cell) {
+                cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+
+            dataRows.forEach(function(r) { wsStyled.addRow(r); });
+            for (var i = 2; i <= wsStyled.rowCount; i++) {
+                var fill = (i % 2 === 0) ? 'FFF8FAFC' : 'FFEFF6FF';
+                wsStyled.getRow(i).eachCell(function(cell) {
+                    cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+                    cell.border = {
+                        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                    };
+                });
+            }
+
+            wsStyled.views = [{ state: 'frozen', ySplit: 1 }];
+            var buffer = await wbStyled.xlsx.writeBuffer();
+            _downloadBlobFile_(fileName, new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            return;
+        } catch (e) {
+            console.error('Styled sample export failed, fallback to SheetJS:', e);
+        }
+    }
+
+    if (typeof XLSX === 'undefined') {
+        showToast('Excel library is not loaded on this page.', 'error');
+        return;
+    }
+    var aoa = [headers].concat(rows || []);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sample');
+    XLSX.writeFile(wb, fileName);
+}
+
+function downloadBulkSample(type, format) {
+    var kind = String(type || '').toLowerCase();
+    var fmt = String(format || 'csv').toLowerCase();
+    var headers = [];
+    var rows = [];
+    var baseName = 'bulk_sample';
+
+    if (kind === 'vendor') {
+        headers = ['name', 'address', 'gstin'];
+        rows = [
+            ['ABC Power Systems', 'No.12, Industrial Estate, Chennai', '33ABCDE1234F1Z5'],
+            ['Prime Rentals', '45, Market Road, Coimbatore', '33PQRSX6789L1Z2']
+        ];
+        baseName = 'vendor_bulk_sample';
+    } else if (kind === 'item') {
+        headers = ['desc', 'uom', 'rate', 'default_qty'];
+        rows = [
+            ['DG Cable 50m', 'NOS', 1500, 1],
+            ['AMF Panel', 'NOS', 2500, 1]
+        ];
+        baseName = 'item_bulk_sample';
+    } else if (kind === 'po') {
+        headers = ['po_no', 'po_date', 'vendor_name', 'vendor_address', 'vendor_gstin', 'client_name', 'event_name', 'event_location', 'event_date', 'transport', 'cgst_percent', 'sgst_percent', 'terms', 'item_desc', 'qty', 'uom', 'rate', 'days'];
+        rows = [
+            ['RE/EO/101', '2026-03-14', 'ABC Power Systems', 'No.12, Industrial Estate, Chennai', '33ABCDE1234F1Z5', 'RC Electricals', 'Expo Setup', 'Chennai Trade Center', '15-03-2026 TO 18-03-2026', 5000, 9, 9, '60 DAYS FROM THE DATE OF SUPPLY', 'DG Cable 50m', 2, 'NOS', 1500, 4],
+            ['RE/EO/102', '2026-03-15', 'Prime Rentals', '45, Market Road, Coimbatore', '33PQRSX6789L1Z2', 'Skyline Events', 'Concert', 'Madurai', '20-03-2026 TO 22-03-2026', 3000, 9, 9, '50% ADVANCE', 'AMF Panel', 1, 'NOS', 2500, 3]
+        ];
+        baseName = 'po_bulk_sample';
+    } else {
+        showToast('Unknown sample type.', 'error');
+        return;
+    }
+
+    if (fmt === 'xlsx') {
+        _downloadXlsxFile_(baseName + '.xlsx', 'Sample', headers, rows);
+    } else {
+        _downloadCsvFile_(baseName + '.csv', headers, rows);
+    }
+}
+
 // ============================================================
 // VENDOR MASTER
 // ============================================================
@@ -804,11 +1083,12 @@ function renderVendorList(data) {
     var startIdx = (pg.page - 1) * pg.size;
     var pageData = _pgSlice('vendor', filtered);
 
-    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Vendor Name</th><th>Address</th><th>GSTIN</th>' + (isAdmin() ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
+    var canEditMaster = canManageMasters();
+    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Vendor Name</th><th>Address</th><th>GSTIN</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     pageData.forEach((vendor, i) => {
         var displayIdx = startIdx + i;
         var origIdx = allData.indexOf(vendor);
-        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + (vendor.name || '') + '</td><td class="max-w-xs truncate text-slate-600">' + (vendor.address || '-') + '</td><td><code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">' + (vendor.gstin || '-') + '</code></td>' + (isAdmin() ? '<td><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteVendor(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
+        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + (vendor.name || '') + '</td><td class="max-w-xs truncate text-slate-600">' + (vendor.address || '-') + '</td><td><code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">' + (vendor.gstin || '-') + '</code></td>' + (canEditMaster ? '<td class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editVendor(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteVendor(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
     });
     html += '</tbody></table>';
     if (total > pg.size) html += _buildPaginationBar('vendor', total, renderVendorList);
@@ -816,6 +1096,7 @@ function renderVendorList(data) {
 }
 
 function addVendor() {
+    if (!canManageMasters()) return;
     const name = $('vendorNameInput').value.trim();
     const address = ($('vendorAddressInput') || {}).value || '';
     const gstin = ($('vendorGstinInput') || {}).value || '';
@@ -834,11 +1115,95 @@ function addVendor() {
     .catch(err => alert('Error adding vendor: ' + err.message));
 }
 
+function editVendor(idx) {
+    if (!canManageMasters()) return;
+    var v = (_vendorData || [])[idx];
+    if (!v) return;
+
+    showEditPopup_({
+        title: 'Edit Vendor',
+        fields: [
+            { name: 'name', label: 'Vendor Name', value: v.name || '', required: true },
+            { name: 'address', label: 'Address', type: 'textarea', value: v.address || '' },
+            { name: 'gstin', label: 'GSTIN', value: v.gstin || '' }
+        ]
+    }).then(function(data) {
+        if (!data) return;
+        gsPost({ action: 'update_vendor', idx: idx, name: data.name, address: data.address, gstin: data.gstin })
+        .then(function(resp) {
+            if (resp.success) {
+                invalidateCache('read_vendors');
+                invalidateCache('read_all');
+                fetchVendors();
+                showToast('Vendor updated.', 'success');
+            } else {
+                showToast('Failed to update vendor: ' + (resp.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(function(err) {
+            showToast('Error updating vendor: ' + err.message, 'error');
+        });
+    });
+}
+
 function deleteVendor(idx) {
+    if (!canManageMasters()) return;
     if (!confirm('Delete this vendor?')) return;
     gsPost({ action: 'delete_vendor', idx })
     .then(resp => { if (resp.success) { invalidateCache('read_vendors'); invalidateCache('read_all'); fetchVendors(); } else alert('Failed to delete vendor: ' + (resp.error || 'Unknown error')); })
     .catch(err => alert('Error deleting vendor: ' + err.message));
+}
+
+function triggerVendorBulkUpload() {
+    if (!canBulkUploadMasters()) return;
+    var inp = $('vendorBulkFile');
+    if (inp) inp.click();
+}
+
+function handleVendorBulkFile(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    var file = input.files[0];
+    readSpreadsheetRows(file, function(rows) {
+        if (!rows || !rows.length) {
+            showToast('No rows found in file.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        var mapped = rows.map(function(r) {
+            var name = r.name || r.vendor_name || r.vendor || r['Vendor Name'] || r['Name'] || '';
+            var address = r.address || r.vendor_address || r['Vendor Address'] || '';
+            var gstin = r.gstin || r.gst || r.vendor_gstin || r['GSTIN'] || '';
+            return {
+                name: String(name || '').trim(),
+                address: String(address || '').trim(),
+                gstin: String(gstin || '').trim()
+            };
+        }).filter(function(r) { return r.name; });
+
+        if (!mapped.length) {
+            showToast('No valid vendor rows found. Required: name.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        gsPost({ action: 'bulk_upsert_vendors', rows: mapped })
+        .then(function(resp) {
+            if (resp.success) {
+                invalidateCache('read_vendors');
+                invalidateCache('read_all');
+                fetchVendors();
+                showToast('Vendor bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+            } else {
+                showToast('Vendor bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+            }
+            input.value = '';
+        })
+        .catch(function(err) {
+            showToast('Vendor bulk upload failed: ' + err.message, 'error');
+            input.value = '';
+        });
+    });
 }
 
 // ============================================================
@@ -896,11 +1261,12 @@ function renderItemMasterList(data) {
     var startIdx = (pg.page - 1) * pg.size;
     var pageData = _pgSlice('item', filtered);
 
-    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Description</th><th>UOM</th><th>Rate/Day</th><th>Default Qty</th>' + (isAdmin() ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
+    var canEditMaster = canManageMasters();
+    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Description</th><th>UOM</th><th>Rate/Day</th><th>Default Qty</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     pageData.forEach((item, i) => {
         var displayIdx = startIdx + i;
         var origIdx = allData.indexOf(item);
-        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + item.desc + '</td><td><span class="badge badge-ghost badge-sm">' + item.uom + '</span></td><td class="font-mono text-slate-700">' + item.rate + '</td><td class="text-slate-600">' + (item.default_qty || '') + '</td>' + (isAdmin() ? '<td><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteItemMaster(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
+        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + item.desc + '</td><td><span class="badge badge-ghost badge-sm">' + item.uom + '</span></td><td class="font-mono text-slate-700">' + item.rate + '</td><td class="text-slate-600">' + (item.default_qty || '') + '</td>' + (canEditMaster ? '<td class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editItemMaster(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteItemMaster(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
     });
     html += '</tbody></table>';
     if (total > pg.size) html += _buildPaginationBar('item', total, renderItemMasterList);
@@ -908,6 +1274,7 @@ function renderItemMasterList(data) {
 }
 
 function addItemMaster() {
+    if (!canManageMasters()) return;
     const desc = $('itemDescInput').value.trim();
     const uom = $('itemUomInput').value.trim();
     const rate = $('itemRateInput').value.trim();
@@ -927,11 +1294,98 @@ function addItemMaster() {
     .catch(err => alert('Error adding item: ' + err.message));
 }
 
+function editItemMaster(idx) {
+    if (!canManageMasters()) return;
+    var item = (_itemMasterData || [])[idx];
+    if (!item) return;
+
+    showEditPopup_({
+        title: 'Edit Item',
+        fields: [
+            { name: 'desc', label: 'Description', value: item.desc || '', required: true },
+            { name: 'uom', label: 'UOM', value: item.uom || 'NOS', required: true },
+            { name: 'rate', label: 'Rate / Day', type: 'number', value: item.rate || 0, required: true },
+            { name: 'default_qty', label: 'Default Qty', type: 'number', value: item.default_qty || 1, required: true }
+        ]
+    }).then(function(data) {
+        if (!data) return;
+        gsPost({ action: 'update_item', idx: idx, desc: data.desc, uom: data.uom, rate: data.rate, default_qty: data.default_qty })
+        .then(function(resp) {
+            if (resp.success) {
+                invalidateCache('read_items');
+                invalidateCache('read_all');
+                fetchItemMaster();
+                showToast('Item updated.', 'success');
+            } else {
+                showToast('Failed to update item: ' + (resp.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(function(err) {
+            showToast('Error updating item: ' + err.message, 'error');
+        });
+    });
+}
+
 function deleteItemMaster(idx) {
+    if (!canManageMasters()) return;
     if (!confirm('Delete this item?')) return;
     gsPost({ action: 'delete_item', idx })
     .then(resp => { if (resp.success) { invalidateCache('read_items'); invalidateCache('read_all'); fetchItemMaster(); } else alert('Failed to delete item: ' + (resp.error || 'Unknown error')); })
     .catch(err => alert('Error deleting item: ' + err.message));
+}
+
+function triggerItemBulkUpload() {
+    if (!canBulkUploadMasters()) return;
+    var inp = $('itemBulkFile');
+    if (inp) inp.click();
+}
+
+function handleItemBulkFile(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    var file = input.files[0];
+    readSpreadsheetRows(file, function(rows) {
+        if (!rows || !rows.length) {
+            showToast('No rows found in file.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        var mapped = rows.map(function(r) {
+            var desc = r.desc || r.description || r.item || r['Item Description'] || r['Description'] || '';
+            var uom = r.uom || r.unit || r['UOM'] || 'NOS';
+            var rate = r.rate || r.per_day || r['Rate/Day'] || 0;
+            var defaultQty = r.default_qty || r.defaultqty || r.qty || r['Default Qty'] || 1;
+            return {
+                desc: String(desc || '').trim(),
+                uom: String(uom || 'NOS').trim() || 'NOS',
+                rate: Number(rate) || 0,
+                default_qty: parseInt(defaultQty, 10) || 1
+            };
+        }).filter(function(r) { return r.desc; });
+
+        if (!mapped.length) {
+            showToast('No valid item rows found. Required: desc/description.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        gsPost({ action: 'bulk_upsert_items', rows: mapped })
+        .then(function(resp) {
+            if (resp.success) {
+                invalidateCache('read_items');
+                invalidateCache('read_all');
+                fetchItemMaster();
+                showToast('Item bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+            } else {
+                showToast('Item bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+            }
+            input.value = '';
+        })
+        .catch(function(err) {
+            showToast('Item bulk upload failed: ' + err.message, 'error');
+            input.value = '';
+        });
+    });
 }
 
 // ============================================================
@@ -949,38 +1403,250 @@ function fetchPOs() {
 }
 
 var _poSearchTerm = '';
+var _poVendorFilter = '';
+var _poDateFrom = '';
+var _poDateTo = '';
+var _poFilteredList = [];
+var _poQuickRange = '';
+
+function _toDateOnly_(value) {
+    if (!value) return null;
+    var d = new Date(value);
+    if (!isNaN(d.getTime())) {
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+    var parts = String(value).split(/[\/-]/);
+    if (parts.length === 3) {
+        var dd = parseInt(parts[0], 10);
+        var mm = parseInt(parts[1], 10);
+        var yy = parseInt(parts[2], 10);
+        var d2 = new Date(yy, mm - 1, dd);
+        if (!isNaN(d2.getTime())) {
+            d2.setHours(0, 0, 0, 0);
+            return d2;
+        }
+    }
+    return null;
+}
+
+function _getPOTotal_(po) {
+    var t = parseFloat(po.total);
+    if (!isNaN(t) && t > 0) return t;
+    var items = po.items || [];
+    if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (e) { items = []; }
+    }
+    if (!Array.isArray(items)) items = [];
+    var itemsTotal = items.reduce(function(sum, it) { return sum + (parseFloat(it.total) || 0); }, 0);
+    var transport = parseFloat(po.transport) || 0;
+    var sub = itemsTotal + transport;
+    var cgst = sub * (parseFloat(po.cgst_percent) || 0) / 100;
+    var sgst = sub * (parseFloat(po.sgst_percent) || 0) / 100;
+    return Math.round(sub + cgst + sgst);
+}
+
+function _applyPOFilters_(allData) {
+    var fromDate = _poDateFrom ? _toDateOnly_(_poDateFrom) : null;
+    var toDate = _poDateTo ? _toDateOnly_(_poDateTo) : null;
+    return allData.filter(function(po) {
+        var matchesSearch = !_poSearchTerm || (
+            (po.po_no || '').toLowerCase().includes(_poSearchTerm)
+            || (po.vendor_name || '').toLowerCase().includes(_poSearchTerm)
+            || (po.event_name || '').toLowerCase().includes(_poSearchTerm)
+            || (po.event_location || '').toLowerCase().includes(_poSearchTerm)
+            || (po.po_date || '').toLowerCase().includes(_poSearchTerm)
+            || String(po.total || '').includes(_poSearchTerm)
+        );
+        if (!matchesSearch) return false;
+
+        if (_poVendorFilter) {
+            var vn = String(po.vendor_name || '').toLowerCase().trim();
+            if (vn !== _poVendorFilter) return false;
+        }
+
+        if (fromDate || toDate) {
+            var pd = _toDateOnly_(po.po_date);
+            if (!pd) return false;
+            if (fromDate && pd < fromDate) return false;
+            if (toDate && pd > toDate) return false;
+        }
+
+        return true;
+    });
+}
+
+function _populatePOVendorFilter_(allData) {
+    var sel = $('poVendorFilter');
+    if (!sel) return;
+    var current = _poVendorFilter;
+    var seen = {};
+    var vendors = [];
+    allData.forEach(function(po) {
+        var name = String(po.vendor_name || '').trim();
+        var key = name.toLowerCase();
+        if (!name || seen[key]) return;
+        seen[key] = true;
+        vendors.push({ key: key, label: name });
+    });
+    vendors.sort(function(a, b) { return a.label.localeCompare(b.label); });
+
+    var html = '<option value="">All Vendors</option>';
+    vendors.forEach(function(v) {
+        html += '<option value="' + escHtml(v.key) + '">' + escHtml(v.label) + '</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = current;
+}
+
+function _updatePOFilteredSummary_(filtered) {
+    if ($('poFilteredCount')) $('poFilteredCount').textContent = filtered.length;
+    if ($('poFilteredValue')) {
+        var total = filtered.reduce(function(sum, po) { return sum + _getPOTotal_(po); }, 0);
+        $('poFilteredValue').textContent = 'Rs ' + total.toLocaleString('en-IN');
+    }
+}
+
 function filterPOList(term) {
     _poSearchTerm = (term || '').toLowerCase().trim();
     _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
     renderPOList();
 }
+
+function setPOVendorFilter(vendorKey) {
+    _poVendorFilter = String(vendorKey || '').toLowerCase().trim();
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    renderPOList();
+}
+
+function setPODateFilters() {
+    _poDateFrom = ($('poDateFrom') ? $('poDateFrom').value : '') || '';
+    _poDateTo = ($('poDateTo') ? $('poDateTo').value : '') || '';
+    _poQuickRange = '';
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    renderPOList();
+}
+
+function _fmtDateInput_(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+}
+
+function _applyQuickRangeButtonState_() {
+    var ids = {
+        'today': 'poQuickToday',
+        'week': 'poQuickWeek',
+        'month': 'poQuickMonth',
+        'last-month': 'poQuickLastMonth'
+    };
+    Object.keys(ids).forEach(function(k) {
+        var el = $(ids[k]);
+        if (!el) return;
+        if (_poQuickRange === k) {
+            el.classList.remove('btn-outline');
+            el.classList.add('btn-primary');
+        } else {
+            el.classList.remove('btn-primary');
+            el.classList.add('btn-outline');
+        }
+    });
+}
+
+function applyPOQuickDateRange(type) {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var from = '';
+    var to = '';
+
+    if (type === 'today') {
+        from = _fmtDateInput_(now);
+        to = _fmtDateInput_(now);
+    } else if (type === 'week') {
+        var dayIdx = now.getDay();
+        var mondayOffset = (dayIdx === 0 ? -6 : 1 - dayIdx);
+        var monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        var sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        from = _fmtDateInput_(monday);
+        to = _fmtDateInput_(sunday);
+    } else if (type === 'month') {
+        var m1 = new Date(now.getFullYear(), now.getMonth(), 1);
+        var m2 = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        from = _fmtDateInput_(m1);
+        to = _fmtDateInput_(m2);
+    } else if (type === 'last-month') {
+        var lm1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        var lm2 = new Date(now.getFullYear(), now.getMonth(), 0);
+        from = _fmtDateInput_(lm1);
+        to = _fmtDateInput_(lm2);
+    } else {
+        type = '';
+    }
+
+    _poQuickRange = type;
+    _poDateFrom = from;
+    _poDateTo = to;
+    if ($('poDateFrom')) $('poDateFrom').value = from;
+    if ($('poDateTo')) $('poDateTo').value = to;
+
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    renderPOList();
+}
+
+function clearPOFilters() {
+    _poSearchTerm = '';
+    _poVendorFilter = '';
+    _poDateFrom = '';
+    _poDateTo = '';
+    _poQuickRange = '';
+
+    if ($('poSearchInput')) $('poSearchInput').value = '';
+    if ($('poVendorFilter')) $('poVendorFilter').value = '';
+    if ($('poDateFrom')) $('poDateFrom').value = '';
+    if ($('poDateTo')) $('poDateTo').value = '';
+
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    renderPOList();
+}
+
+function exportCurrentPOViewExcel() {
+    var list = Array.isArray(_poFilteredList) && _poFilteredList.length ? _poFilteredList : [];
+    if (!list.length) {
+        showToast('No filtered POs available to export.', 'warning');
+        return;
+    }
+    exportAllPOsExcel(list);
+}
+
 function renderPOList(data) {
     if (data) window._poList = data;
     var allData = window._poList || [];
-    // Apply search filter
-    var filtered = allData;
-    if (_poSearchTerm) {
-        filtered = allData.filter(function(po) {
-            return (po.po_no || '').toLowerCase().includes(_poSearchTerm)
-                || (po.vendor_name || '').toLowerCase().includes(_poSearchTerm)
-                || (po.event_name || '').toLowerCase().includes(_poSearchTerm)
-                || (po.event_location || '').toLowerCase().includes(_poSearchTerm)
-                || (po.po_date || '').toLowerCase().includes(_poSearchTerm)
-                || String(po.total || '').includes(_poSearchTerm);
-        });
-    }
+    _populatePOVendorFilter_(allData);
+    var filtered = _applyPOFilters_(allData);
+    _poFilteredList = filtered.slice();
+    _updatePOFilteredSummary_(filtered);
+    _applyQuickRangeButtonState_();
     if (!Array.isArray(allData) || allData.length === 0) {
         $('poList').innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg><p class="text-sm">No purchase orders found.</p></div>';
         return;
     }
-    if (filtered.length === 0 && _poSearchTerm) {
-        $('poList').innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg><p class="text-sm">No POs match "<strong>' + escHtml(_poSearchTerm) + '</strong>"</p></div>';
+    if (filtered.length === 0) {
+        var hasFilter = !!(_poSearchTerm || _poVendorFilter || _poDateFrom || _poDateTo);
+        var emptyMsg = hasFilter ? 'No POs match current filters.' : 'No purchase orders found.';
+        $('poList').innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg><p class="text-sm">' + emptyMsg + '</p></div>';
         return;
     }
     // Hero stats
     if ($('poHeroStats')) {
         var statsHtml = '<div class="hero-stat"><div class="stat-label">Total POs</div><div class="stat-value">' + allData.length + '</div></div>';
-        if (_poSearchTerm) statsHtml += '<div class="hero-stat"><div class="stat-label">Matched</div><div class="stat-value">' + filtered.length + '</div></div>';
+        if (_poSearchTerm || _poVendorFilter || _poDateFrom || _poDateTo) {
+            statsHtml += '<div class="hero-stat"><div class="stat-label">Filtered</div><div class="stat-value">' + filtered.length + '</div></div>';
+        }
+        var filteredValue = filtered.reduce(function(sum, po) { return sum + _getPOTotal_(po); }, 0);
+        statsHtml += '<div class="hero-stat"><div class="stat-label">Value</div><div class="stat-value">₹' + filteredValue.toLocaleString('en-IN') + '</div></div>';
         $('poHeroStats').innerHTML = statsHtml;
     }
     var pg = _initPagination('po', 10);
@@ -1003,7 +1669,7 @@ function renderPOList(data) {
         html += '<td>';
         html += '<div class="flex flex-wrap gap-1">';
         html += '<a href="po-view.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-primary btn-outline btn-modern" title="View"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>';
-        if (isAdmin()) {
+        if (canManagePO()) {
         html += '<a href="po-edit.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-warning btn-outline btn-modern" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>';
         }
         html += '<button onclick="listDownloadPDF(' + idx + ')" class="btn btn-xs btn-error btn-outline btn-modern" title="Download PDF"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>';
@@ -1017,6 +1683,99 @@ function renderPOList(data) {
     html += '</tbody></table>';
     if (total > pg.size) html += _buildPaginationBar('po', total, renderPOList);
     $('poList').innerHTML = html;
+}
+
+function triggerPOBulkUpload() {
+    if (!canBulkUploadPO()) return;
+    var inp = $('poBulkFile');
+    if (inp) inp.click();
+}
+
+function _parsePOItemsForBulk(row) {
+    var itemsRaw = row.items_json || row.items || row.line_items || '';
+    if (itemsRaw && typeof itemsRaw === 'string') {
+        try {
+            var parsed = JSON.parse(itemsRaw);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Fall through to single-item parsing.
+        }
+    }
+
+    var desc = row.item_desc || row.desc || row.description || '';
+    if (!String(desc || '').trim()) return [];
+
+    var qty = parseFloat(row.qty || row.quantity || 1) || 1;
+    var perDay = parseFloat(row.per_day || row.rate || 0) || 0;
+    var days = parseFloat(row.days || 1) || 1;
+    return [{
+        desc: String(desc).trim(),
+        qty: qty,
+        uom: String(row.uom || 'NOS').trim() || 'NOS',
+        per_day: perDay,
+        days: days,
+        total: qty * perDay * days,
+        isMaster: false
+    }];
+}
+
+function handlePOBulkFile(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    var file = input.files[0];
+    readSpreadsheetRows(file, function(rows) {
+        if (!rows || !rows.length) {
+            showToast('No rows found in file.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        var mapped = rows.map(function(r) {
+            var poNo = r.po_no || r.po || r['PO No'] || r['PO Number'] || '';
+            var poDate = r.po_date || r.date || r['PO Date'] || '';
+            var vendorName = r.vendor_name || r.vendor || r['Vendor Name'] || '';
+            return {
+                po_no: String(poNo || '').trim(),
+                po_date: String(poDate || '').trim(),
+                vendor_name: String(vendorName || '').trim(),
+                vendor_address: String(r.vendor_address || r.address || r['Vendor Address'] || '').trim(),
+                vendor_gstin: String(r.vendor_gstin || r.gstin || r.gst || r['GSTIN'] || '').trim(),
+                client_name: String(r.client_name || r.client || r['Client Name'] || '').trim(),
+                event_name: String(r.event_name || r.event || r['Event Name'] || '').trim(),
+                event_location: String(r.event_location || r.location || r['Event Location'] || '').trim(),
+                event_date: String(r.event_date || r['Event Date'] || '').trim(),
+                transport: parseFloat(r.transport || 0) || 0,
+                cgst_percent: parseFloat(r.cgst_percent || r.cgst || 0) || 0,
+                sgst_percent: parseFloat(r.sgst_percent || r.sgst || 0) || 0,
+                terms: String(r.terms || r['Terms'] || '').trim(),
+                items: _parsePOItemsForBulk(r)
+            };
+        }).filter(function(r) {
+            return r.po_no && r.po_date && r.vendor_name;
+        });
+
+        if (!mapped.length) {
+            showToast('No valid PO rows found. Required: po_no, po_date, vendor_name.', 'warning');
+            input.value = '';
+            return;
+        }
+
+        gsPost({ action: 'bulk_upsert_pos', rows: mapped })
+        .then(function(resp) {
+            if (resp.success) {
+                invalidateCache('read');
+                invalidateCache('read_all');
+                fetchPOs();
+                showToast('PO bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+            } else {
+                showToast('PO bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+            }
+            input.value = '';
+        })
+        .catch(function(err) {
+            showToast('PO bulk upload failed: ' + err.message, 'error');
+            input.value = '';
+        });
+    });
 }
 
 // ── Show all items of a PO in a popup modal ──
@@ -1141,9 +1900,274 @@ function listDownloadPDF(idx) {
 }
 
 // Download Excel for a PO from the list page
-function listDownloadExcel(idx) {
-    var po = _preparePO(idx);
-    if (!po) return alert('PO not found');
+function _downloadBlobFile_(fileName, blob) {
+    var link = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function() {
+        URL.revokeObjectURL(url);
+        link.remove();
+    }, 500);
+}
+
+async function _downloadPOExcelStyled_(po, fileName) {
+    if (typeof ExcelJS === 'undefined') return false;
+
+    var items = po._items || [];
+    var transport = parseFloat(po.transport) || 0;
+    var itemsTotal = items.reduce(function(s, i) { return s + (parseFloat(i.total) || 0); }, 0);
+    var subtotal = itemsTotal + transport;
+    var cgstPct = parseFloat(po.cgst_percent) || 0;
+    var sgstPct = parseFloat(po.sgst_percent) || 0;
+    var cgstAmt = Math.round(subtotal * cgstPct / 100);
+    var sgstAmt = Math.round(subtotal * sgstPct / 100);
+    var grandTotal = parseFloat(po.total) || (subtotal + cgstAmt + sgstAmt);
+    var totalQty = items.reduce(function(s, i) { return s + (parseInt(i.qty) || 0); }, 0);
+
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'PO Manager';
+    wb.created = new Date();
+    var ws = wb.addWorksheet('PurchaseOrder', {
+        pageSetup: {
+            paperSize: 9, // A4
+            orientation: 'portrait',
+            fitToPage: true,
+            fitToWidth: 1,
+            fitToHeight: 0,
+            horizontalCentered: true,
+            margins: { left: 0.35, right: 0.35, top: 0.45, bottom: 0.45, header: 0.2, footer: 0.2 }
+        }
+    });
+
+    ws.views = [{ state: 'frozen', ySplit: 16 }];
+    ws.columns = [
+        { width: 8 },
+        { width: 37 },
+        { width: 11 },
+        { width: 9 },
+        { width: 15 },
+        { width: 11 },
+        { width: 17 }
+    ];
+
+    var thinGray = { style: 'thin', color: { argb: 'FFD1D5DB' } };
+    var gridBorder = { top: thinGray, left: thinGray, bottom: thinGray, right: thinGray };
+
+    var rowNo = 1;
+    function add(values) { ws.addRow(values); rowNo++; return rowNo - 1; }
+    function mergeRow(rowIdx) { ws.mergeCells('A' + rowIdx + ':G' + rowIdx); }
+    function styleRangeBorder(fromCell, toCell, border) {
+        var from = ws.getCell(fromCell);
+        var to = ws.getCell(toCell);
+        for (var r = from.row; r <= to.row; r++) {
+            for (var c = from.col; c <= to.col; c++) {
+                ws.getRow(r).getCell(c).border = border;
+            }
+        }
+    }
+
+    // Header block (PDF style)
+    var r1 = add(['RANGA ELECTRICALS PVT LTD']); mergeRow(r1);
+    var r2 = add(['NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.']); mergeRow(r2);
+    var r3 = add(['E-mail: info@rangaelectricals.com']); mergeRow(r3);
+    var r4 = add(['GST IN: 33AAHCR4037J1ZD']); mergeRow(r4);
+    var r5 = add(['']); mergeRow(r5);
+    var r6 = add(['PURCHASE ORDER']); mergeRow(r6);
+    var r7 = add(['']); mergeRow(r7);
+
+    ws.getCell('A' + r1).font = { bold: true, size: 17, color: { argb: 'FF1E3A8A' } };
+    ws.getCell('A' + r2).font = { size: 10, color: { argb: 'FF334155' } };
+    ws.getCell('A' + r3).font = { size: 9, color: { argb: 'FF64748B' } };
+    ws.getCell('A' + r4).font = { bold: true, size: 10, color: { argb: 'FF0F172A' } };
+    ws.getCell('A' + r6).font = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } };
+    ws.getCell('A' + r6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+    ['A' + r1, 'A' + r2, 'A' + r3, 'A' + r4, 'A' + r6].forEach(function(addr) {
+        ws.getCell(addr).alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    ws.getRow(r1).height = 24;
+    ws.getRow(r2).height = 16;
+    ws.getRow(r3).height = 14;
+    ws.getRow(r4).height = 16;
+    ws.getRow(r6).height = 22;
+
+    // Two detail boxes (left vendor / right PO info)
+    var boxTop = add(['To,', '', '', '', 'PO NO:', po.po_no || '', '']);
+    ws.mergeCells('A' + boxTop + ':D' + boxTop);
+    ws.mergeCells('F' + boxTop + ':G' + boxTop);
+    ws.getCell('A' + boxTop).font = { italic: true, size: 9, color: { argb: 'FF6B7280' } };
+    ws.getCell('E' + boxTop).font = { size: 9, color: { argb: 'FF6B7280' }, bold: true };
+    ws.getCell('F' + boxTop).alignment = { horizontal: 'right' };
+    ws.getCell('F' + boxTop).font = { bold: true, color: { argb: 'FF2563EB' } };
+
+    var boxR2 = add([po.vendor_name || '', '', '', '', 'DATE:', po.po_date || '', '']);
+    ws.mergeCells('A' + boxR2 + ':D' + boxR2);
+    ws.mergeCells('F' + boxR2 + ':G' + boxR2);
+    ws.getCell('A' + boxR2).font = { bold: true, size: 11 };
+    ws.getCell('E' + boxR2).font = { size: 9, color: { argb: 'FF6B7280' }, bold: true };
+    ws.getCell('F' + boxR2).alignment = { horizontal: 'right' };
+    ws.getCell('F' + boxR2).font = { bold: true };
+
+    var boxR3 = add([po.vendor_address || '', '', '', '', 'Client Name:', po.client_name ? ('M/s. ' + po.client_name) : '', '' ]);
+    ws.mergeCells('A' + boxR3 + ':D' + boxR3);
+    ws.mergeCells('F' + boxR3 + ':G' + boxR3);
+    ws.getCell('A' + boxR3).alignment = { wrapText: true, vertical: 'top' };
+    ws.getCell('A' + boxR3).font = { size: 9 };
+    ws.getCell('E' + boxR3).font = { size: 9, color: { argb: 'FF6B7280' }, bold: true };
+    ws.getCell('F' + boxR3).font = { bold: true, size: 9 };
+    ws.getCell('F' + boxR3).alignment = { horizontal: 'right' };
+
+    var boxR4 = add([po.vendor_gstin ? ('GSTIN: ' + po.vendor_gstin) : '', '', '', '', 'Event Name:', po.event_name || '', '']);
+    ws.mergeCells('A' + boxR4 + ':D' + boxR4);
+    ws.mergeCells('F' + boxR4 + ':G' + boxR4);
+    ws.getCell('A' + boxR4).font = { size: 9 };
+    ws.getCell('E' + boxR4).font = { size: 9, color: { argb: 'FF6B7280' }, bold: true };
+    ws.getCell('F' + boxR4).font = { bold: true, size: 9 };
+    ws.getCell('F' + boxR4).alignment = { horizontal: 'right' };
+
+    var boxR5 = add(['', '', '', '', 'Event Date:', po.event_date || '', '']);
+    ws.mergeCells('A' + boxR5 + ':D' + boxR5);
+    ws.mergeCells('F' + boxR5 + ':G' + boxR5);
+    ws.getCell('E' + boxR5).font = { size: 9, color: { argb: 'FF6B7280' }, bold: true };
+    ws.getCell('F' + boxR5).font = { bold: true, size: 9 };
+    ws.getCell('F' + boxR5).alignment = { horizontal: 'right' };
+
+    styleRangeBorder('A' + boxTop, 'D' + boxR5, gridBorder);
+    styleRangeBorder('E' + boxTop, 'G' + boxR5, gridBorder);
+    ws.getRow(boxR3).height = po.vendor_address ? 36 : 18;
+
+    var instRow = add(['We are pleased to place our order in your favour for the supply of following items']);
+    ws.mergeCells('A' + instRow + ':G' + instRow);
+    ws.getCell('A' + instRow).font = { italic: true, size: 9, color: { argb: 'FF475569' } };
+
+    var headerRow = add(['Sl.No', 'Item Description', 'Qty', 'UOM', 'Per Day Amt', 'Days', 'Total (INR)']);
+    ws.getRow(headerRow).height = 22;
+    for (var c = 1; c <= 7; c++) {
+        var hCell = ws.getRow(headerRow).getCell(c);
+        hCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        hCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+        hCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        hCell.border = {
+            top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+            left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+            bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+            right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+        };
+    }
+
+    var dataStart = headerRow + 1;
+    items.forEach(function(item, idx) {
+        add([
+            idx + 1,
+            item.desc || '',
+            parseFloat(item.qty) || 0,
+            item.uom || '',
+            parseFloat(item.per_day) || 0,
+            parseFloat(item.days) || 0,
+            parseFloat(item.total) || 0
+        ]);
+    });
+    if (transport > 0) add([items.length + 1, 'TRANSPORT CHARGES', '', '', '', '', transport]);
+
+    var dataEnd = rowNo - 1;
+    for (var r = dataStart; r <= dataEnd; r++) {
+        for (var cc = 1; cc <= 7; cc++) {
+            var cell = ws.getRow(r).getCell(cc);
+            cell.border = gridBorder;
+            if (cc === 2) cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+            if (cc === 1 || cc === 3 || cc === 4 || cc === 6) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            if (cc === 5 || cc === 7) {
+                cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                cell.numFmt = '#,##0.00';
+            }
+        }
+        ws.getRow(r).height = 20;
+    }
+
+    var spacer = add([]);
+    ws.getRow(spacer).height = 8;
+    var totalRow = add(['', 'Total', totalQty, '', '', '', subtotal]);
+    var cgstRow = cgstPct ? add(['', '', '', '', '', 'Add : CGST @ ' + cgstPct + '%', cgstAmt]) : 0;
+    var sgstRow = sgstPct ? add(['', '', '', '', '', 'Add : SGST @ ' + sgstPct + '%', sgstAmt]) : 0;
+    var grandRow = add(['', '', '', '', '', 'GRAND TOTAL', grandTotal]);
+
+    [totalRow, cgstRow, sgstRow, grandRow].forEach(function(rr) {
+        if (!rr) return;
+        for (var c2 = 6; c2 <= 7; c2++) {
+            var ccell = ws.getRow(rr).getCell(c2);
+            ccell.border = gridBorder;
+            ccell.alignment = { horizontal: 'right', vertical: 'middle' };
+            if (c2 === 7) ccell.numFmt = '#,##0.00';
+        }
+    });
+    ws.getRow(totalRow).font = { bold: true };
+    if (cgstRow) ws.getRow(cgstRow).font = { italic: true };
+    if (sgstRow) ws.getRow(sgstRow).font = { italic: true };
+    ws.getRow(grandRow).font = { bold: true, size: 12, color: { argb: 'FF92400E' } };
+    ws.getCell('F' + grandRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+    ws.getCell('G' + grandRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+
+    var blankAfterTotal = add([]);
+    ws.getRow(blankAfterTotal).height = 8;
+
+    if (po.terms) {
+        var termsRow = add(['TERMS OF PAYMENT: ' + po.terms]);
+        ws.mergeCells('A' + termsRow + ':G' + termsRow);
+        ws.getCell('A' + termsRow).font = { size: 9 };
+        ws.getCell('A' + termsRow).alignment = { wrapText: true };
+    }
+
+    var dividerRow = add([]);
+    for (var dc = 1; dc <= 7; dc++) {
+        ws.getRow(dividerRow).getCell(dc).border = { top: { style: 'thin', color: { argb: 'FF64748B' } } };
+    }
+
+    var evRow = add(['EVENT LOCATION', po.event_name || '', '', '', '', 'for RANGA ELECTRICALS PVT LTD', '']);
+    ws.mergeCells('A' + evRow + ':A' + evRow);
+    ws.mergeCells('B' + evRow + ':D' + evRow);
+    ws.mergeCells('F' + evRow + ':G' + evRow);
+    ws.getCell('A' + evRow).font = { bold: true, size: 9 };
+    ws.getCell('B' + evRow).font = { bold: true, size: 9 };
+    ws.getCell('F' + evRow).font = { italic: true, size: 9 };
+    ws.getCell('F' + evRow).alignment = { horizontal: 'right' };
+
+    if (po.event_location) {
+        var ev2Row = add(['', po.event_location, '', '', '', '', '']);
+        ws.mergeCells('B' + ev2Row + ':D' + ev2Row);
+        ws.getCell('B' + ev2Row).alignment = { wrapText: true };
+        ws.getRow(ev2Row).height = 26;
+    }
+
+    var signSpacer = add([]);
+    ws.getRow(signSpacer).height = 22;
+    var signLine = add(['', '', '', '', '', '____________________', '']);
+    ws.mergeCells('F' + signLine + ':G' + signLine);
+    ws.getCell('F' + signLine).alignment = { horizontal: 'right' };
+    ws.getCell('F' + signLine).font = { color: { argb: 'FF6B7280' } };
+    var signText = add(['', '', '', '', '', 'Authorised Signatory', '']);
+    ws.mergeCells('F' + signText + ':G' + signText);
+    ws.getCell('F' + signText).alignment = { horizontal: 'right' };
+    ws.getCell('F' + signText).font = { bold: true, size: 9 };
+
+    ws.headerFooter.oddHeader = '&C&RANGA ELECTRICALS PVT LTD';
+    ws.headerFooter.oddFooter = '&LPO: ' + (po.po_no || '') + '&RPage &P of &N';
+    ws.pageSetup.printArea = 'A1:G' + (rowNo - 1);
+
+    var buffer = await wb.xlsx.writeBuffer();
+    _downloadBlobFile_(fileName, new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    return true;
+}
+
+async function downloadPOExcelFromObject(po) {
+    if (!po) return;
+    var fileName = 'PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.xlsx';
+    var styledOk = await _downloadPOExcelStyled_(po, fileName);
+    if (styledOk) return;
+
+    // Fallback to legacy SheetJS export
     var items = po._items || [];
     var transport = parseFloat(po.transport) || 0;
     var itemsTotal = items.reduce(function(s, i) { return s + (parseFloat(i.total) || 0); }, 0);
@@ -1191,7 +2215,280 @@ function listDownloadExcel(idx) {
     ws['!cols'] = [{ wch: 8 }, { wch: 38 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 16 }, { wch: 20 }];
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'PurchaseOrder');
-    XLSX.writeFile(wb, 'PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.xlsx');
+    XLSX.writeFile(wb, fileName);
+}
+
+function listDownloadExcel(idx) {
+    var po = _preparePO(idx);
+    if (!po) return alert('PO not found');
+    downloadPOExcelFromObject(po);
+}
+
+function exportAllPOsExcel(sourceList) {
+    var list = Array.isArray(sourceList) ? sourceList.slice() : (Array.isArray(window._poList) ? window._poList.slice() : []);
+    if (!list.length) {
+        showToast('No POs available to export.', 'warning');
+        return;
+    }
+
+    var fileName = 'All_Purchase_Orders_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    _downloadAllPOsExcelStyled_(list, fileName)
+        .then(function(ok) {
+            if (ok) {
+                showToast('All POs exported successfully.', 'success');
+                return;
+            }
+            _downloadAllPOsExcelFallback_(list, fileName);
+            showToast('All POs exported (basic format).', 'info');
+        })
+        .catch(function(err) {
+            console.error('All PO export failed:', err);
+            _downloadAllPOsExcelFallback_(list, fileName);
+            showToast('All POs exported (fallback).', 'warning');
+        });
+}
+
+async function _downloadAllPOsExcelStyled_(list, fileName) {
+    if (typeof ExcelJS === 'undefined') return false;
+
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'PO Manager';
+    wb.created = new Date();
+    var ws = wb.addWorksheet('All POs');
+
+    ws.columns = [
+        { width: 7 },   // S.No
+        { width: 16 },  // PO No
+        { width: 13 },  // PO Date
+        { width: 26 },  // Vendor
+        { width: 20 },  // Client
+        { width: 20 },  // Event
+        { width: 28 },  // Event Location
+        { width: 13 },  // Event Date
+        { width: 34 },  // Item
+        { width: 9 },   // Qty
+        { width: 9 },   // NOS
+        { width: 14 },  // Rate
+        { width: 10 },  // Days
+        { width: 16 },  // Item Amount
+        { width: 16 }   // PO Total
+    ];
+
+    var moneyFmt = '#,##0.00';
+    var qtyFmt = '#,##0.##';
+
+    function applyBorder(cell) {
+        cell.border = {
+            top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            right: { style: 'thin', color: { argb: 'FFD1D5DB' } }
+        };
+    }
+
+    ws.mergeCells('A1:O1');
+    ws.getCell('A1').value = 'ALL PURCHASE ORDERS - DETAILED EXPORT';
+    ws.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FF1E3A8A' } };
+    ws.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 24;
+
+    ws.mergeCells('A2:O2');
+    ws.getCell('A2').value = 'Generated on: ' + new Date().toLocaleString();
+    ws.getCell('A2').font = { size: 10, color: { argb: 'FF64748B' } };
+    ws.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(2).height = 18;
+
+    var headerRow = 4;
+    ws.getRow(headerRow).values = ['S.No', 'PO No', 'PO Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Item Description', 'Qty', 'NOS', 'Rate', 'Days', 'Item Amount', 'PO Total'];
+    ws.getRow(headerRow).height = 22;
+    ws.getRow(headerRow).eachCell(function(cell) {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+        applyBorder(cell);
+    });
+
+    var row = headerRow + 1;
+    var grandAll = 0;
+    var bandA = 'FFF8FAFC';
+    var bandB = 'FFF0F9FF';
+
+    for (var i = 0; i < list.length; i++) {
+        var po = list[i] || {};
+        var items = po.items || [];
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) { items = []; }
+        }
+        if (!Array.isArray(items) || !items.length) items = [{ desc: '-', qty: 0, uom: 'NOS', per_day: 0, days: 0, total: 0 }];
+
+        var poTotal = parseFloat(po.total) || 0;
+        if (!poTotal) {
+            var transport = parseFloat(po.transport) || 0;
+            var itemsTotal = items.reduce(function(s, it) { return s + (parseFloat(it.total) || 0); }, 0);
+            var sub = itemsTotal + transport;
+            var cgst = sub * (parseFloat(po.cgst_percent) || 0) / 100;
+            var sgst = sub * (parseFloat(po.sgst_percent) || 0) / 100;
+            poTotal = Math.round(sub + cgst + sgst);
+        }
+        grandAll += poTotal;
+
+        var blockStart = row;
+        for (var j = 0; j < items.length; j++) {
+            var item = items[j] || {};
+            var qty = parseFloat(item.qty) || 0;
+            var rate = parseFloat(item.per_day) || 0;
+            var days = parseFloat(item.days) || 0;
+            var amount = parseFloat(item.total) || 0;
+
+            ws.getRow(row).values = [
+                i + 1,
+                po.po_no || '',
+                po.po_date || '',
+                po.vendor_name || '',
+                po.client_name || '',
+                po.event_name || '',
+                po.event_location || '',
+                po.event_date || '',
+                item.desc || '-',
+                qty,
+                item.uom || 'NOS',
+                rate,
+                days,
+                amount,
+                poTotal
+            ];
+
+            var fillColor = (i % 2 === 0) ? bandA : bandB;
+            for (var c = 1; c <= 15; c++) {
+                var cell = ws.getRow(row).getCell(c);
+                applyBorder(cell);
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+                if (c === 9) cell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+                else if (c === 7) cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                else if ([10, 11, 12, 13, 14, 15].indexOf(c) !== -1) cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                else cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            }
+
+            ws.getCell('J' + row).numFmt = qtyFmt;
+            ws.getCell('L' + row).numFmt = moneyFmt;
+            ws.getCell('M' + row).numFmt = qtyFmt;
+            ws.getCell('N' + row).numFmt = moneyFmt;
+            ws.getCell('O' + row).numFmt = moneyFmt;
+            row++;
+        }
+
+        var blockEnd = row - 1;
+        if (blockEnd > blockStart) {
+            ['A','B','C','D','E','F','G','H','O'].forEach(function(col) {
+                ws.mergeCells(col + blockStart + ':' + col + blockEnd);
+                var mc = ws.getCell(col + blockStart);
+                mc.alignment = { horizontal: (col === 'O' ? 'right' : 'left'), vertical: 'middle', wrapText: true };
+                mc.font = { bold: col === 'O' || col === 'B' };
+            });
+        } else {
+            ws.getCell('B' + blockStart).font = { bold: true };
+            ws.getCell('O' + blockStart).font = { bold: true };
+        }
+
+        // Visual separator between PO blocks.
+        if (i !== list.length - 1) {
+            ws.getRow(row).height = 6;
+            for (var sc = 1; sc <= 15; sc++) {
+                var sepCell = ws.getRow(row).getCell(sc);
+                sepCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+                sepCell.border = {
+                    top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            }
+            row++;
+        }
+    }
+
+    var summaryRow = row + 1;
+    ws.mergeCells('A' + summaryRow + ':N' + summaryRow);
+    ws.getCell('A' + summaryRow).value = 'GRAND TOTAL OF ALL POs';
+    ws.getCell('A' + summaryRow).font = { bold: true, color: { argb: 'FF92400E' } };
+    ws.getCell('A' + summaryRow).alignment = { horizontal: 'right', vertical: 'middle' };
+    ws.getCell('A' + summaryRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+    ws.getCell('O' + summaryRow).value = grandAll;
+    ws.getCell('O' + summaryRow).numFmt = moneyFmt;
+    ws.getCell('O' + summaryRow).font = { bold: true, color: { argb: 'FF92400E' } };
+    ws.getCell('O' + summaryRow).alignment = { horizontal: 'right', vertical: 'middle' };
+    ws.getCell('O' + summaryRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+    applyBorder(ws.getCell('A' + summaryRow));
+    applyBorder(ws.getCell('O' + summaryRow));
+
+    ws.autoFilter = {
+        from: { row: headerRow, column: 1 },
+        to: { row: headerRow, column: 15 }
+    };
+    ws.views = [{ state: 'frozen', ySplit: headerRow }];
+
+    var buffer = await wb.xlsx.writeBuffer();
+    _downloadBlobFile_(fileName, new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    return true;
+}
+
+function _downloadAllPOsExcelFallback_(list, fileName) {
+    if (typeof XLSX === 'undefined') {
+        showToast('Excel export library not loaded.', 'error');
+        return;
+    }
+
+    var rows = [['S.No', 'PO No', 'PO Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Item Description', 'Qty', 'NOS', 'Rate', 'Days', 'Item Amount', 'PO Total']];
+    var merges = [];
+    var ptr = 2;
+
+    list.forEach(function(po, i) {
+        var items = po.items || [];
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) { items = []; }
+        }
+        if (!Array.isArray(items) || !items.length) items = [{ desc: '-', qty: 0, uom: 'NOS', per_day: 0, days: 0, total: 0 }];
+
+        var poTotal = parseFloat(po.total) || 0;
+        var start = ptr;
+        items.forEach(function(item, idx) {
+            rows.push([
+                i + 1,
+                po.po_no || '',
+                po.po_date || '',
+                po.vendor_name || '',
+                po.client_name || '',
+                po.event_name || '',
+                po.event_location || '',
+                po.event_date || '',
+                item.desc || '-',
+                parseFloat(item.qty) || 0,
+                item.uom || 'NOS',
+                parseFloat(item.per_day) || 0,
+                parseFloat(item.days) || 0,
+                parseFloat(item.total) || 0,
+                idx === 0 ? poTotal : ''
+            ]);
+            ptr++;
+        });
+        var end = ptr - 1;
+        if (end > start) {
+            [0,1,2,3,4,5,6,7,14].forEach(function(c) {
+                merges.push({ s: { r: start - 1, c: c }, e: { r: end - 1, c: c } });
+            });
+        }
+    });
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!merges'] = merges;
+    ws['!cols'] = [
+        { wch: 7 }, { wch: 14 }, { wch: 11 }, { wch: 24 }, { wch: 18 },
+        { wch: 18 }, { wch: 26 }, { wch: 12 }, { wch: 34 }, { wch: 8 },
+        { wch: 8 }, { wch: 12 }, { wch: 9 }, { wch: 14 }, { wch: 14 }
+    ];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'All POs');
+    XLSX.writeFile(wb, fileName);
 }
 
 // Print PDF for a PO from the list page
@@ -1713,6 +3010,7 @@ function _applyPODefaults() {
 function initPOForm() {
     const form = $('poForm');
     if (!form) return;
+    if (!canManagePO()) return;
     fetchVendors();
     fetchItemMaster();
     renderPOItemsTable();
@@ -1787,4 +3085,3 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
-

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="../seal.js"></script>
 </head>
@@ -46,10 +47,67 @@
               </div>
               <div class="flex items-center gap-3">
                 <div class="hero-stats" id="poHeroStats"></div>
-                <a href="add-po.html" class="btn btn-sm bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 btn-modern crud-action">
+                <a href="add-po.html" class="btn btn-sm bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 btn-modern crud-action" data-po-edit>
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                   New PO
                 </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 flex flex-wrap items-center gap-2" data-po-bulk>
+            <input id="poBulkFile" type="file" class="hidden" accept=".xlsx,.xls,.csv" onchange="handlePOBulkFile(this)">
+            <button type="button" class="btn btn-outline btn-sm" onclick="triggerPOBulkUpload()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+              Bulk Upload POs
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="exportAllPOsExcel()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export All POs Excel
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="downloadBulkSample('po','csv')">Sample CSV</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="downloadBulkSample('po','xlsx')">Sample Excel</button>
+            <span class="text-xs text-base-content/60">Required: <code>po_no</code>, <code>po_date</code>, <code>vendor_name</code>. Optional: <code>items_json</code> or <code>item_desc/qty/uom/rate/days</code>.</span>
+          </div>
+
+          <div class="modern-card mb-4">
+            <div class="card-content">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 items-end">
+                <div class="form-control lg:col-span-2">
+                  <label class="label py-0.5"><span class="label-text text-xs">Vendor Filter</span></label>
+                  <select id="poVendorFilter" class="select select-bordered select-sm" onchange="setPOVendorFilter(this.value)">
+                    <option value="">All Vendors</option>
+                  </select>
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">From Date</span></label>
+                  <input id="poDateFrom" type="date" class="input input-bordered input-sm" onchange="setPODateFilters()">
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">To Date</span></label>
+                  <input id="poDateTo" type="date" class="input input-bordered input-sm" onchange="setPODateFilters()">
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">Actions</span></label>
+                  <div class="flex gap-1.5">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="clearPOFilters()">Reset</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="exportCurrentPOViewExcel()">Export View</button>
+                  </div>
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">Summary</span></label>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="badge badge-info badge-sm">POs: <span id="poFilteredCount" class="ml-1 font-semibold">0</span></span>
+                    <span class="badge badge-success badge-sm">Value: <span id="poFilteredValue" class="ml-1 font-semibold">Rs 0</span></span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-2 flex flex-wrap gap-1.5">
+                <button type="button" id="poQuickToday" class="btn btn-xs btn-outline" onclick="applyPOQuickDateRange('today')">Today</button>
+                <button type="button" id="poQuickWeek" class="btn btn-xs btn-outline" onclick="applyPOQuickDateRange('week')">This Week</button>
+                <button type="button" id="poQuickMonth" class="btn btn-xs btn-outline" onclick="applyPOQuickDateRange('month')">This Month</button>
+                <button type="button" id="poQuickLastMonth" class="btn btn-xs btn-outline" onclick="applyPOQuickDateRange('last-month')">Last Month</button>
+                <button type="button" id="poQuickClear" class="btn btn-xs btn-ghost" onclick="applyPOQuickDateRange('clear')">Clear Quick Range</button>
               </div>
             </div>
           </div>

@@ -369,9 +369,9 @@
       // ── Page load ──
       window.onload = function() {
         if (!initPageAuth()) return;
-        // Block non-admin users from editing POs
-        if (!isAdmin()) {
-          document.querySelector('.drawer-content').innerHTML = '<div class="p-6"><div class="alert alert-warning"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg><span>Access denied. Only admins can edit Purchase Orders.</span></div><a href="po-list.html" class="btn btn-primary btn-sm mt-4">&larr; View POs</a></div>';
+        // Block users without PO manage permission.
+        if (!canManagePO()) {
+          document.querySelector('.drawer-content').innerHTML = '<div class="p-6"><div class="alert alert-warning"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg><span>Access denied. You do not have permission to edit Purchase Orders.</span></div><a href="po-list.html" class="btn btn-primary btn-sm mt-4">&larr; View POs</a></div>';
           return;
         }
         var poId = String(getQueryParam('id') || '').trim();

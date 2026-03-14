@@ -65,6 +65,7 @@
                 <div class="form-control">
                   <select id="newRole" class="select select-bordered select-sm input-modern">
                     <option value="viewer">Viewer (View Only)</option>
+                    <option value="editor">Editor (PO + Masters)</option>
                     <option value="admin">Admin (Full Access)</option>
                   </select>
                 </div>
@@ -172,18 +173,19 @@
         filtered.forEach(function(u, fi) {
           var idx = _users.indexOf(u);
           var isSelf = u.username.toLowerCase() === currentUser.toLowerCase();
-          var roleBadge = u.role === 'admin'
+          var role = String(u.role || 'viewer').toLowerCase();
+          var roleBadge = role === 'admin'
             ? '<span class="badge badge-primary badge-sm">Admin</span>'
-            : '<span class="badge badge-ghost badge-sm">Viewer</span>';
+            : (role === 'editor'
+              ? '<span class="badge badge-accent badge-sm">Editor</span>'
+              : '<span class="badge badge-ghost badge-sm">Viewer</span>');
           html += '<tr>';
           html += '<td class="font-medium text-slate-500">' + (fi + 1) + '</td>';
           html += '<td class="font-medium">' + escHtml(u.username) + (isSelf ? ' <span class="badge badge-xs badge-accent">You</span>' : '') + '</td>';
           html += '<td>' + roleBadge + '</td>';
           html += '<td class="flex gap-1">';
           if (!isSelf) {
-            var newRole = u.role === 'admin' ? 'viewer' : 'admin';
-            var roleLabel = u.role === 'admin' ? 'Make Viewer' : 'Make Admin';
-            html += '<button class="btn btn-xs btn-info btn-outline btn-modern" onclick="changeRole(' + idx + ',\'' + newRole + '\')">' + roleLabel + '</button>';
+            html += '<button class="btn btn-xs btn-info btn-outline btn-modern" onclick="cycleRole(' + idx + ')">Change Role</button>';
             html += '<button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="resetPassword(' + idx + ')">Reset Password</button>';
             html += '<button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteUser(' + idx + ')">Delete</button>';
           } else {
@@ -258,6 +260,13 @@
         if (!_users[idx]) return;
         _users[idx].role = newRole;
         saveAppUsers(_users).then(function() { renderUsers(); });
+      }
+
+      function cycleRole(idx) {
+        if (!_users[idx]) return;
+        var role = String(_users[idx].role || 'viewer').toLowerCase();
+        var nextRole = role === 'viewer' ? 'editor' : (role === 'editor' ? 'admin' : 'viewer');
+        changeRole(idx, nextRole);
       }
 
       function resetPassword(idx) {

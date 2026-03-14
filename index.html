@@ -31,7 +31,8 @@
             <div class="hero-bg-blob w-48 h-48 bg-yellow-300" style="top:-20px;right:10%;"></div>
             <div class="hero-bg-blob w-56 h-56 bg-pink-300" style="bottom:-40px;right:-20px;"></div>
             <div class="hero-content">
-              <div class="flex items-center gap-3 mb-4">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div class="flex items-center gap-3 mb-2 lg:mb-0">
                 <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
                 </div>
@@ -40,6 +41,14 @@
                   <p class="hero-subtitle">RANGA ELECTRICALS PVT LTD</p>
                 </div>
               </div>
+                <div class="flex items-center gap-2">
+                  <span id="dashboardDate" class="badge-soft bg-white/25 text-white border-white/30">--</span>
+                  <button type="button" onclick="refreshDashboard()" class="btn btn-xs bg-white/20 border-white/30 text-white hover:bg-white/30">
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div class="hero-stats mt-3" id="dashboardHeroStats"></div>
             </div>
           </div>
 
@@ -85,15 +94,130 @@
               <div class="stat-card-blob"></div>
               <div class="flex items-center justify-between relative">
                 <div>
-                  <div class="stat-card-label">Quick Action</div>
-                  <a href="pages/add-po.html" class="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-lg text-sm font-semibold text-white hover:bg-white/30 transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                    New PO
-                  </a>
+                  <div class="stat-card-label">Total PO Value</div>
+                  <div class="stat-card-value" id="statPOValue">--</div>
                 </div>
                 <div class="stat-card-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Strip -->
+          <div class="kpi-strip mb-6">
+            <div class="kpi-mini">
+              <div class="label">Average PO Value</div>
+              <div class="value" id="kpiAvgPoValue">--</div>
+              <div class="hint" id="kpiAvgPoHint">--</div>
+            </div>
+            <div class="kpi-mini">
+              <div class="label">Current Month POs</div>
+              <div class="value" id="kpiMonthPOs">--</div>
+              <div class="hint" id="kpiMonthAmount">--</div>
+            </div>
+            <div class="kpi-mini">
+              <div class="label">Active Vendors</div>
+              <div class="value" id="kpiActiveVendors">--</div>
+              <div class="hint">Vendors with at least one PO</div>
+            </div>
+            <div class="kpi-mini">
+              <div class="label">Line Items Tracked</div>
+              <div class="value" id="kpiLineItems">--</div>
+              <div class="hint">Across all POs</div>
+            </div>
+          </div>
+
+          <!-- Action Center -->
+          <div class="modern-card mb-6">
+            <div class="card-header">
+              <div class="header-icon bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              </div>
+              <div>
+                <div class="header-title">Action Center</div>
+                <div class="header-subtitle">Quick shortcuts for daily work</div>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="quick-actions">
+                <a href="pages/add-po.html" class="quick-action-btn" data-po-edit>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                  New PO
+                </a>
+                <a href="pages/po-list.html" class="quick-action-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  PO Register
+                </a>
+                <a href="pages/analytics.html" class="quick-action-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  Analytics
+                </a>
+                <button type="button" onclick="downloadDashboardSummaryCsv()" class="quick-action-btn">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Export Summary
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Insights -->
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+            <div class="modern-card xl:col-span-2">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-sky-500 to-blue-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M7 14l3-3 3 2 4-5" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Monthly Spend Trend</div>
+                  <div class="header-subtitle">Last 6 months</div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="trend-bars" id="dashboardTrendBars"></div>
+              </div>
+            </div>
+            <div class="modern-card">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Top Vendors</div>
+                  <div class="header-subtitle">By PO value</div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="insight-list" id="dashboardTopVendors"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+            <div class="modern-card xl:col-span-2">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Recent Purchase Orders</div>
+                  <div class="header-subtitle">Latest 6 entries</div>
+                </div>
+              </div>
+              <div class="card-content overflow-x-auto" id="dashboardRecentPOs"></div>
+            </div>
+            <div class="modern-card">
+              <div class="card-header">
+                <div class="header-icon bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                </div>
+                <div>
+                  <div class="header-title">Top Items</div>
+                  <div class="header-subtitle">Most requested</div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="insight-list" id="dashboardTopItems"></div>
               </div>
             </div>
           </div>
@@ -180,19 +304,308 @@
     </div>
     <script src="main.js"></script>
     <script>
+      var _dashboardSummaryCache = null;
+
+      function parseDateSafe(value) {
+        if (!value) return null;
+        var d = new Date(value);
+        if (!isNaN(d.getTime())) return d;
+        var parts = String(value).split(/[\/-]/);
+        if (parts.length === 3) {
+          var y = Number(parts[2]);
+          var m = Number(parts[1]);
+          var day = Number(parts[0]);
+          var d2 = new Date(y, m - 1, day);
+          if (!isNaN(d2.getTime())) return d2;
+        }
+        return null;
+      }
+
+      function toMoney(n) {
+        var v = Number(n || 0);
+        return 'Rs ' + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+      }
+
+      function safeItems(po) {
+        if (Array.isArray(po.items)) return po.items;
+        if (typeof po.items === 'string') {
+          try {
+            var parsed = JSON.parse(po.items);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            return [];
+          }
+        }
+        return [];
+      }
+
+      function computeDashboardSummary(data) {
+        var pos = Array.isArray(data.pos) ? data.pos.slice() : [];
+        var vendors = Array.isArray(data.vendors) ? data.vendors : [];
+        var items = Array.isArray(data.items) ? data.items : [];
+
+        var totalPOValue = 0;
+        var monthPOs = 0;
+        var monthAmount = 0;
+        var lineItemsCount = 0;
+        var vendorMap = {};
+        var itemMap = {};
+        var now = new Date();
+        var curMonth = now.getMonth();
+        var curYear = now.getFullYear();
+
+        var months = [];
+        for (var i = 5; i >= 0; i--) {
+          var dt = new Date(curYear, curMonth - i, 1);
+          var key = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+          months.push({ key: key, label: dt.toLocaleDateString('en-US', { month: 'short' }), amount: 0, count: 0 });
+        }
+
+        pos.forEach(function(po) {
+          var amount = Number(po.total || 0);
+          totalPOValue += amount;
+
+          var d = parseDateSafe(po.po_date);
+          if (d) {
+            if (d.getMonth() === curMonth && d.getFullYear() === curYear) {
+              monthPOs += 1;
+              monthAmount += amount;
+            }
+
+            var mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            for (var k = 0; k < months.length; k++) {
+              if (months[k].key === mk) {
+                months[k].amount += amount;
+                months[k].count += 1;
+                break;
+              }
+            }
+          }
+
+          var vn = String(po.vendor_name || 'Unknown Vendor').trim() || 'Unknown Vendor';
+          if (!vendorMap[vn]) vendorMap[vn] = { name: vn, count: 0, value: 0 };
+          vendorMap[vn].count += 1;
+          vendorMap[vn].value += amount;
+
+          var lineItems = safeItems(po);
+          lineItemsCount += lineItems.length;
+          lineItems.forEach(function(it) {
+            var nm = String(it.desc || it.item_desc || 'Unnamed Item').trim() || 'Unnamed Item';
+            var qty = Number(it.qty || 0);
+            if (!itemMap[nm]) itemMap[nm] = { name: nm, qty: 0, count: 0 };
+            itemMap[nm].qty += qty;
+            itemMap[nm].count += 1;
+          });
+        });
+
+        var topVendors = Object.keys(vendorMap).map(function(k) { return vendorMap[k]; }).sort(function(a, b) {
+          return b.value - a.value;
+        }).slice(0, 5);
+
+        var topItems = Object.keys(itemMap).map(function(k) { return itemMap[k]; }).sort(function(a, b) {
+          return b.qty - a.qty;
+        }).slice(0, 5);
+
+        var recent = pos.slice().sort(function(a, b) {
+          var ad = parseDateSafe(a.po_date);
+          var bd = parseDateSafe(b.po_date);
+          var at = ad ? ad.getTime() : 0;
+          var bt = bd ? bd.getTime() : 0;
+          return bt - at;
+        }).slice(0, 6);
+
+        return {
+          pos: pos,
+          vendors: vendors,
+          items: items,
+          totalPOValue: totalPOValue,
+          avgPOValue: pos.length ? (totalPOValue / pos.length) : 0,
+          monthPOs: monthPOs,
+          monthAmount: monthAmount,
+          lineItemsCount: lineItemsCount,
+          activeVendors: Object.keys(vendorMap).length,
+          topVendors: topVendors,
+          topItems: topItems,
+          recent: recent,
+          months: months
+        };
+      }
+
+      function renderInsightRows(elId, rows, valueFormatter) {
+        var el = document.getElementById(elId);
+        if (!el) return;
+        if (!rows.length) {
+          el.innerHTML = '<div class="text-xs text-slate-500">No records available yet.</div>';
+          return;
+        }
+        el.innerHTML = rows.map(function(r, idx) {
+          return ''
+            + '<div class="insight-row">'
+            + '  <div>'
+            + '    <div class="name">' + escHtml(r.name) + '</div>'
+            + '    <div class="meta">POs: ' + (r.count || 0) + '</div>'
+            + '  </div>'
+            + '  <div class="text-right">'
+            + '    <div class="name">' + valueFormatter(r) + '</div>'
+            + '    <div class="meta">Rank #' + (idx + 1) + '</div>'
+            + '  </div>'
+            + '</div>';
+        }).join('');
+      }
+
+      function renderTrendBars(summary) {
+        var el = document.getElementById('dashboardTrendBars');
+        if (!el) return;
+        var max = 0;
+        summary.months.forEach(function(m) { if (m.amount > max) max = m.amount; });
+        if (!max) max = 1;
+
+        el.innerHTML = summary.months.map(function(m) {
+          var h = Math.max(8, Math.round((m.amount / max) * 130));
+          return ''
+            + '<div class="trend-col">'
+            + '  <div class="amount">' + toMoney(m.amount) + '</div>'
+            + '  <div class="bar" style="height:' + h + 'px"></div>'
+            + '  <div class="month">' + m.label + '</div>'
+            + '</div>';
+        }).join('');
+      }
+
+      function renderRecentPOs(summary) {
+        var el = document.getElementById('dashboardRecentPOs');
+        if (!el) return;
+        if (!summary.recent.length) {
+          el.innerHTML = '<div class="text-xs text-slate-500">No recent POs available.</div>';
+          return;
+        }
+
+        var html = ''
+          + '<table class="table table-zebra table-compact w-full">'
+          + '<thead><tr><th>PO No</th><th>Date</th><th>Vendor</th><th class="text-right">Amount</th><th></th></tr></thead><tbody>';
+
+        summary.recent.forEach(function(po) {
+          var poNo = String(po.po_no || '').trim();
+          html += '<tr>';
+          html += '<td class="font-semibold text-primary">' + escHtml(poNo || '-') + '</td>';
+          html += '<td>' + escHtml(po.po_date || '-') + '</td>';
+          html += '<td>' + escHtml(po.vendor_name || '-') + '</td>';
+          html += '<td class="text-right font-mono">' + toMoney(po.total || 0) + '</td>';
+          html += '<td><a class="btn btn-xs btn-outline" href="pages/po-view.html?id=' + encodeURIComponent(poNo) + '">View</a></td>';
+          html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        el.innerHTML = html;
+      }
+
+      function renderDashboard(summary) {
+        _dashboardSummaryCache = summary;
+
+        document.getElementById('statPOs').textContent = summary.pos.length;
+        document.getElementById('statVendors').textContent = summary.vendors.length;
+        document.getElementById('statItems').textContent = summary.items.length;
+        document.getElementById('statPOValue').textContent = toMoney(summary.totalPOValue);
+
+        document.getElementById('kpiAvgPoValue').textContent = toMoney(summary.avgPOValue);
+        document.getElementById('kpiAvgPoHint').textContent = summary.pos.length ? ('Based on ' + summary.pos.length + ' POs') : 'No POs yet';
+        document.getElementById('kpiMonthPOs').textContent = summary.monthPOs;
+        document.getElementById('kpiMonthAmount').textContent = toMoney(summary.monthAmount);
+        document.getElementById('kpiActiveVendors').textContent = summary.activeVendors;
+        document.getElementById('kpiLineItems').textContent = summary.lineItemsCount;
+
+        var hs = document.getElementById('dashboardHeroStats');
+        if (hs) {
+          hs.innerHTML = ''
+            + '<div class="hero-stat"><div class="stat-label">PO Value</div><div class="stat-value">' + toMoney(summary.totalPOValue) + '</div></div>'
+            + '<div class="hero-stat"><div class="stat-label">This Month</div><div class="stat-value">' + summary.monthPOs + ' POs</div></div>'
+            + '<div class="hero-stat"><div class="stat-label">Top Vendor</div><div class="stat-value">' + escHtml(summary.topVendors[0] ? summary.topVendors[0].name : 'NA') + '</div></div>';
+        }
+
+        renderTrendBars(summary);
+        renderInsightRows('dashboardTopVendors', summary.topVendors, function(r) { return toMoney(r.value); });
+        renderInsightRows('dashboardTopItems', summary.topItems, function(r) { return Number(r.qty || 0).toLocaleString('en-IN') + ' qty'; });
+        renderRecentPOs(summary);
+      }
+
+      function setDashboardDate() {
+        var el = document.getElementById('dashboardDate');
+        if (!el) return;
+        el.textContent = new Date().toLocaleDateString('en-IN', {
+          weekday: 'short', year: 'numeric', month: 'short', day: '2-digit'
+        });
+      }
+
+      function loadDashboardData() {
+        fetchAll(function(data) {
+          if (!data) {
+            var fallback = computeDashboardSummary({ pos: [], vendors: [], items: [] });
+            renderDashboard(fallback);
+            return;
+          }
+          renderDashboard(computeDashboardSummary(data));
+        });
+      }
+
+      function refreshDashboard() {
+        invalidateCache();
+        loadDashboardData();
+        showToast('Dashboard refreshed', 'info');
+      }
+
+      function downloadDashboardSummaryCsv() {
+        if (!_dashboardSummaryCache) {
+          showToast('Dashboard data is not ready yet.', 'warning');
+          return;
+        }
+        var s = _dashboardSummaryCache;
+        var rows = [
+          ['Metric', 'Value'],
+          ['Total POs', s.pos.length],
+          ['Total Vendors', s.vendors.length],
+          ['Total Items', s.items.length],
+          ['Total PO Value', s.totalPOValue],
+          ['Average PO Value', s.avgPOValue],
+          ['Current Month POs', s.monthPOs],
+          ['Current Month Amount', s.monthAmount],
+          ['Active Vendors', s.activeVendors],
+          ['Line Items', s.lineItemsCount],
+          [],
+          ['Top Vendors', ''],
+          ['Vendor', 'PO Value']
+        ];
+
+        s.topVendors.forEach(function(v) {
+          rows.push([v.name, v.value]);
+        });
+
+        rows.push([]);
+        rows.push(['Top Items', '']);
+        rows.push(['Item', 'Total Qty']);
+        s.topItems.forEach(function(it) {
+          rows.push([it.name, it.qty]);
+        });
+
+        var csv = rows.map(function(r) {
+          return r.map(function(cell) {
+            var v = (cell === undefined || cell === null) ? '' : String(cell);
+            return '"' + v.replace(/"/g, '""') + '"';
+          }).join(',');
+        }).join('\n');
+
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'dashboard-summary.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+      }
+
       window.onload = function() {
         if (!initPageAuth()) return;
-        fetchAll(function(data) {
-          if (data) {
-            document.getElementById('statPOs').textContent = Array.isArray(data.pos) ? data.pos.length : 0;
-            document.getElementById('statVendors').textContent = Array.isArray(data.vendors) ? data.vendors.length : 0;
-            document.getElementById('statItems').textContent = Array.isArray(data.items) ? data.items.length : 0;
-          } else {
-            document.getElementById('statPOs').textContent = '0';
-            document.getElementById('statVendors').textContent = '0';
-            document.getElementById('statItems').textContent = '0';
-          }
-        });
+        setDashboardDate();
+        loadDashboardData();
       };
     </script>
 </body>

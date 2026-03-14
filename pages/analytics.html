@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="page-bg min-h-screen">
@@ -901,11 +902,225 @@
     // ============================================================
     // EXPORT REPORT
     // ============================================================
-    function exportAnalyticsReport() {
+    async function exportAnalyticsReport() {
+      var fileName = 'PO_Analytics_Report_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+
+      if (window.ExcelJS) {
+        try {
+          var wbStyled = new ExcelJS.Workbook();
+          var moneyFmt = '#,##0.00';
+
+          function styleHeader(row, bg) {
+            row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            row.alignment = { vertical: 'middle', horizontal: 'center' };
+            row.eachCell(function(cell) {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg || 'FF2563EB' } };
+              cell.border = {
+                top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+              };
+            });
+            row.height = 22;
+          }
+
+          function styleGrid(ws, startRow, endRow, rightAlignCols, bandColors) {
+            for (var r = startRow; r <= endRow; r++) {
+              var row = ws.getRow(r);
+              row.eachCell(function(cell, colNumber) {
+                cell.border = {
+                  top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                  left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                  bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                  right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                };
+                if (rightAlignCols.indexOf(colNumber) !== -1) {
+                  cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                } else {
+                  cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                }
+
+                if (bandColors && bandColors.length) {
+                  var bg = bandColors[(r - startRow) % bandColors.length];
+                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+                }
+              });
+            }
+          }
+
+          function styleTitleBand(ws, rowNum, fromCol, toCol, title, bgColor) {
+            ws.mergeCells(fromCol + rowNum + ':' + toCol + rowNum);
+            var cell = ws.getCell(fromCol + rowNum);
+            cell.value = title;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor || 'FF1E40AF' } };
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+              left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+              bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+              right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+            };
+            ws.getRow(rowNum).height = 20;
+          }
+
+          // Summary sheet
+          var wsSummary = wbStyled.addWorksheet('Summary');
+          wsSummary.columns = [{ width: 30 }, { width: 24 }];
+          wsSummary.mergeCells('A1:B1');
+          wsSummary.getCell('A1').value = 'Analytics Report - PO Manager';
+          wsSummary.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FF1E3A8A' } };
+          wsSummary.getCell('A1').alignment = { horizontal: 'center' };
+          wsSummary.addRow(['Generated', new Date().toLocaleString()]);
+          wsSummary.addRow(['Total POs', _filteredPOs.length]);
+          styleTitleBand(wsSummary, 4, 'A', 'B', 'Summary Metrics', 'FF334155');
+          wsSummary.addRow(['Metric', 'Value']);
+          var totalSpend = _filteredPOs.reduce(function(s, po) { return s + getPOTotal(po); }, 0);
+          wsSummary.addRow(['Total Spend', totalSpend]);
+          wsSummary.addRow(['Average PO Value', _filteredPOs.length ? Math.round(totalSpend / _filteredPOs.length) : 0]);
+          wsSummary.addRow(['Unique Vendors', (function() { var s = {}; _filteredPOs.forEach(function(po) { if (po.vendor_name) s[po.vendor_name.trim()] = 1; }); return Object.keys(s).length; })()]);
+          styleHeader(wsSummary.getRow(5), 'FF4F46E5');
+          styleGrid(wsSummary, 6, 8, [2], ['FFF8FAFC', 'FFEFF6FF']);
+          wsSummary.getCell('B6').numFmt = moneyFmt;
+          wsSummary.getCell('B7').numFmt = moneyFmt;
+
+          // Vendor sheet
+          var wsVendor = wbStyled.addWorksheet('Vendor Analysis');
+          wsVendor.columns = [{ width: 34 }, { width: 12 }, { width: 18 }, { width: 12 }];
+          styleTitleBand(wsVendor, 1, 'A', 'D', 'Top Vendors by Spend', 'FF0F766E');
+          wsVendor.addRow(['Vendor Name', 'PO Count', 'Total Spend', '% of Total']);
+          styleHeader(wsVendor.getRow(2), 'FF0F766E');
+          var totalSpendVendor = _vendorAnalysisAll.reduce(function(s, v) { return s + v.spend; }, 0);
+          _vendorAnalysisAll.forEach(function(v) {
+            wsVendor.addRow([v.name, v.count, v.spend, totalSpendVendor > 0 ? (v.spend / totalSpendVendor) : 0]);
+          });
+          if (_vendorAnalysisAll.length) {
+            styleGrid(wsVendor, 3, _vendorAnalysisAll.length + 2, [2, 3, 4], ['FFF0FDFA', 'FFECFEFF']);
+            for (var rv = 3; rv <= _vendorAnalysisAll.length + 2; rv++) {
+              wsVendor.getCell('C' + rv).numFmt = moneyFmt;
+              wsVendor.getCell('D' + rv).numFmt = '0.0%';
+            }
+          }
+
+          // Item sheet
+          var wsItem = wbStyled.addWorksheet('Item Analysis');
+          wsItem.columns = [{ width: 38 }, { width: 14 }, { width: 12 }, { width: 18 }, { width: 16 }];
+          styleTitleBand(wsItem, 1, 'A', 'E', 'Item Performance', 'FF0369A1');
+          wsItem.addRow(['Item Description', 'Times Ordered', 'Total Qty', 'Total Spend', 'Avg Unit Cost']);
+          styleHeader(wsItem.getRow(2), 'FF0369A1');
+          _itemAnalysisAll.forEach(function(item) {
+            wsItem.addRow([item.desc, item.count, item.qty, item.spend, item.qty > 0 ? Math.round(item.spend / item.qty) : 0]);
+          });
+          if (_itemAnalysisAll.length) {
+            styleGrid(wsItem, 3, _itemAnalysisAll.length + 2, [2, 3, 4, 5], ['FFF0F9FF', 'FFEFF6FF']);
+            for (var ri = 3; ri <= _itemAnalysisAll.length + 2; ri++) {
+              wsItem.getCell('D' + ri).numFmt = moneyFmt;
+              wsItem.getCell('E' + ri).numFmt = moneyFmt;
+            }
+          }
+
+          // PO sheet (with item-level lines + merged PO-level cells)
+          var wsPO = wbStyled.addWorksheet('All POs');
+          wsPO.columns = [
+            { width: 14 }, // PO No
+            { width: 12 }, // Date
+            { width: 24 }, // Vendor
+            { width: 20 }, // Client
+            { width: 20 }, // Event
+            { width: 24 }, // Event Location
+            { width: 14 }, // Event Date
+            { width: 34 }, // Item
+            { width: 10 }, // Qty
+            { width: 10 }, // NOS/UOM
+            { width: 14 }, // Amount
+            { width: 16 }  // PO Total
+          ];
+          wsPO.addRow(['PO No', 'Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Item', 'Qty', 'NOS', 'Amount', 'PO Total']);
+          styleHeader(wsPO.getRow(1), 'FF7C3AED');
+
+          var poDataStart = 2;
+          _filteredPOs.forEach(function(po, poIdx) {
+            var items = getPOItems(po);
+            if (!items.length) items = [{ desc: '-', qty: '', uom: '', total: 0 }];
+
+            var blockStart = wsPO.lastRow.number + 1;
+            var poTotal = getPOTotal(po);
+            items.forEach(function(item, idx) {
+              var qty = parseFloat(item.qty || 0) || 0;
+              var lineTotal = parseFloat(item.total || 0) || 0;
+              var row = wsPO.addRow([
+                po.po_no || '',
+                po.po_date || '',
+                po.vendor_name || '',
+                po.client_name || '',
+                po.event_name || '',
+                po.event_location || '',
+                po.event_date || '',
+                item.desc || '-',
+                qty,
+                item.uom || 'NOS',
+                lineTotal,
+                poTotal
+              ]);
+
+              // Keep PO total visible only once in merged cell block.
+              if (idx > 0) row.getCell(12).value = null;
+            });
+
+            var blockEnd = wsPO.lastRow.number;
+            var blockFill = (poIdx % 2 === 0) ? 'FFF8FAFC' : 'FFF3F4F6';
+            for (var rr = blockStart; rr <= blockEnd; rr++) {
+              for (var cc = 1; cc <= 12; cc++) {
+                wsPO.getRow(rr).getCell(cc).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blockFill } };
+              }
+            }
+
+            if (blockEnd > blockStart) {
+              ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'L'].forEach(function(col) {
+                wsPO.mergeCells(col + blockStart + ':' + col + blockEnd);
+                wsPO.getCell(col + blockStart).alignment = { vertical: 'middle', horizontal: (col === 'L' ? 'right' : 'left'), wrapText: true };
+              });
+            }
+
+            if (poIdx !== _filteredPOs.length - 1) {
+              var sep = wsPO.addRow(['', '', '', '', '', '', '', '', '', '', '', '']);
+              for (var sc = 1; sc <= 12; sc++) {
+                sep.getCell(sc).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+              }
+            }
+          });
+
+          if (_filteredPOs.length) {
+            var poDataEnd = wsPO.lastRow ? wsPO.lastRow.number : 1;
+            styleGrid(wsPO, poDataStart, poDataEnd, [9, 11, 12]);
+            for (var rp = poDataStart; rp <= poDataEnd; rp++) {
+              wsPO.getCell('I' + rp).numFmt = '#,##0.##';
+              wsPO.getCell('K' + rp).numFmt = moneyFmt;
+              wsPO.getCell('L' + rp).numFmt = moneyFmt;
+              wsPO.getCell('H' + rp).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+            }
+          }
+
+          var buffer = await wbStyled.xlsx.writeBuffer();
+          var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          var link = document.createElement('a');
+          var url = URL.createObjectURL(blob);
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(function() { URL.revokeObjectURL(url); link.remove(); }, 500);
+          showToast('Report exported successfully!', 'success');
+          return;
+        } catch (err) {
+          console.error('ExcelJS export failed, falling back to SheetJS:', err);
+        }
+      }
+
+      // Fallback: existing SheetJS export
       if (!window.XLSX) { showToast('Export library not loaded', 'error'); return; }
       var wb = XLSX.utils.book_new();
-
-      // Sheet 1: Summary
       var summaryData = [
         ['Analytics Report - PO Manager'],
         ['Generated', new Date().toLocaleString()],
@@ -919,16 +1134,14 @@
       var ws1 = XLSX.utils.aoa_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(wb, ws1, 'Summary');
 
-      // Sheet 2: Vendor Analysis
       var vendorRows = [['Vendor Name', 'PO Count', 'Total Spend', '% of Total']];
-      var totalSpend = _vendorAnalysisAll.reduce(function(s, v) { return s + v.spend; }, 0);
+      var totalSpend2 = _vendorAnalysisAll.reduce(function(s, v) { return s + v.spend; }, 0);
       _vendorAnalysisAll.forEach(function(v) {
-        vendorRows.push([v.name, v.count, v.spend, totalSpend > 0 ? ((v.spend / totalSpend) * 100).toFixed(1) + '%' : '0%']);
+        vendorRows.push([v.name, v.count, v.spend, totalSpend2 > 0 ? ((v.spend / totalSpend2) * 100).toFixed(1) + '%' : '0%']);
       });
       var ws2 = XLSX.utils.aoa_to_sheet(vendorRows);
       XLSX.utils.book_append_sheet(wb, ws2, 'Vendor Analysis');
 
-      // Sheet 3: Item Analysis
       var itemRows = [['Item Description', 'Times Ordered', 'Total Qty', 'Total Spend', 'Avg Unit Cost']];
       _itemAnalysisAll.forEach(function(item) {
         itemRows.push([item.desc, item.count, item.qty, item.spend, item.qty > 0 ? Math.round(item.spend / item.qty) : 0]);
@@ -936,15 +1149,47 @@
       var ws3 = XLSX.utils.aoa_to_sheet(itemRows);
       XLSX.utils.book_append_sheet(wb, ws3, 'Item Analysis');
 
-      // Sheet 4: All PO Data
-      var poRows = [['PO No', 'Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Total']];
+      var poRows = [['PO No', 'Date', 'Vendor', 'Client', 'Event', 'Event Location', 'Event Date', 'Item', 'Qty', 'NOS', 'Amount', 'PO Total']];
+      var poMerges = [];
+      var poRowPtr = 2;
+
       _filteredPOs.forEach(function(po) {
-        poRows.push([po.po_no, po.po_date, po.vendor_name, po.client_name, po.event_name, po.event_location, po.event_date, getPOTotal(po)]);
+        var items = getPOItems(po);
+        if (!items.length) items = [{ desc: '-', qty: '', uom: '', total: 0 }];
+
+        var blockStart = poRowPtr;
+        var poTotal = getPOTotal(po);
+
+        items.forEach(function(item, idx) {
+          poRows.push([
+            po.po_no || '',
+            po.po_date || '',
+            po.vendor_name || '',
+            po.client_name || '',
+            po.event_name || '',
+            po.event_location || '',
+            po.event_date || '',
+            item.desc || '-',
+            parseFloat(item.qty || 0) || 0,
+            item.uom || 'NOS',
+            parseFloat(item.total || 0) || 0,
+            idx === 0 ? poTotal : ''
+          ]);
+          poRowPtr++;
+        });
+
+        var blockEnd = poRowPtr - 1;
+        if (blockEnd > blockStart) {
+          [0, 1, 2, 3, 4, 5, 6, 11].forEach(function(c) {
+            poMerges.push({ s: { r: blockStart - 1, c: c }, e: { r: blockEnd - 1, c: c } });
+          });
+        }
       });
       var ws4 = XLSX.utils.aoa_to_sheet(poRows);
+      ws4['!merges'] = poMerges;
       XLSX.utils.book_append_sheet(wb, ws4, 'All POs');
 
-      XLSX.writeFile(wb, 'PO_Analytics_Report_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+      XLSX.writeFile(wb, fileName);
       showToast('Report exported successfully!', 'success');
     }
 
