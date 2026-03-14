@@ -453,6 +453,9 @@ function _buildPaginationBar(key, totalItems, renderFn) {
     var pg = _pagination[key];
     var totalPages = Math.max(1, Math.ceil(totalItems / pg.size));
     if (pg.page > totalPages) pg.page = totalPages;
+    var renderFnName = (typeof renderFn === 'function' && renderFn.name)
+        ? renderFn.name
+        : String(renderFn || '');
 
     var start = (pg.page - 1) * pg.size + 1;
     var end = Math.min(pg.page * pg.size, totalItems);
@@ -462,7 +465,7 @@ function _buildPaginationBar(key, totalItems, renderFn) {
     // Left: showing info + page size selector
     html += '<div class="flex items-center gap-3">';
     html += '<span class="text-base-content/60">Showing <b>' + start + '</b>–<b>' + end + '</b> of <b>' + totalItems + '</b></span>';
-    html += '<select class="select select-bordered select-xs w-auto" onchange="_pgSize(\'' + key + '\',' + 'this.value,' + renderFn + ')">';
+    html += '<select class="select select-bordered select-xs w-auto" onchange="_pgSize(\'' + key + '\', this.value, \'' + renderFnName + '\')">';
     PAGE_SIZE_OPTIONS.forEach(function(s) {
         html += '<option value="' + s + '"' + (pg.size === s ? ' selected' : '') + '>' + s + ' / page</option>';
     });
@@ -471,34 +474,44 @@ function _buildPaginationBar(key, totalItems, renderFn) {
 
     // Right: page buttons
     html += '<div class="join">';
-    html += '<button class="join-item btn btn-xs' + (pg.page <= 1 ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\',' + 1 + ',' + renderFn + ')" title="First">&laquo;</button>';
-    html += '<button class="join-item btn btn-xs' + (pg.page <= 1 ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\',' + (pg.page - 1) + ',' + renderFn + ')" title="Previous">&lsaquo;</button>';
+    html += '<button class="join-item btn btn-xs' + (pg.page <= 1 ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\', ' + 1 + ', \'' + renderFnName + '\')" title="First">&laquo;</button>';
+    html += '<button class="join-item btn btn-xs' + (pg.page <= 1 ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\', ' + (pg.page - 1) + ', \'' + renderFnName + '\')" title="Previous">&lsaquo;</button>';
 
     // Page number buttons (show max 5)
     var startP = Math.max(1, pg.page - 2);
     var endP = Math.min(totalPages, startP + 4);
     if (endP - startP < 4) startP = Math.max(1, endP - 4);
     for (var p = startP; p <= endP; p++) {
-        html += '<button class="join-item btn btn-xs' + (p === pg.page ? ' btn-active btn-primary' : '') + '" onclick="_pgGo(\'' + key + '\',' + p + ',' + renderFn + ')">' + p + '</button>';
+        html += '<button class="join-item btn btn-xs' + (p === pg.page ? ' btn-active btn-primary' : '') + '" onclick="_pgGo(\'' + key + '\', ' + p + ', \'' + renderFnName + '\')">' + p + '</button>';
     }
 
-    html += '<button class="join-item btn btn-xs' + (pg.page >= totalPages ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\',' + (pg.page + 1) + ',' + renderFn + ')" title="Next">&rsaquo;</button>';
-    html += '<button class="join-item btn btn-xs' + (pg.page >= totalPages ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\',' + totalPages + ',' + renderFn + ')" title="Last">&raquo;</button>';
+    html += '<button class="join-item btn btn-xs' + (pg.page >= totalPages ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\', ' + (pg.page + 1) + ', \'' + renderFnName + '\')" title="Next">&rsaquo;</button>';
+    html += '<button class="join-item btn btn-xs' + (pg.page >= totalPages ? ' btn-disabled' : '') + '" onclick="_pgGo(\'' + key + '\', ' + totalPages + ', \'' + renderFnName + '\')" title="Last">&raquo;</button>';
     html += '</div>';
 
     html += '</div>';
     return html;
 }
 
-function _pgGo(key, page, renderFn) {
-    _pagination[key].page = page;
-    renderFn();
+function _resolveRenderFn_(renderFnOrName) {
+    if (typeof renderFnOrName === 'function') return renderFnOrName;
+    if (typeof renderFnOrName === 'string' && typeof window[renderFnOrName] === 'function') {
+        return window[renderFnOrName];
+    }
+    return null;
 }
 
-function _pgSize(key, size, renderFn) {
+function _pgGo(key, page, renderFnOrName) {
+    _pagination[key].page = page;
+    var fn = _resolveRenderFn_(renderFnOrName);
+    if (fn) fn();
+}
+
+function _pgSize(key, size, renderFnOrName) {
     _pagination[key].size = parseInt(size);
     _pagination[key].page = 1;
-    renderFn();
+    var fn = _resolveRenderFn_(renderFnOrName);
+    if (fn) fn();
 }
 
 function _pgSlice(key, data) {
@@ -1804,18 +1817,31 @@ function renderPOList(data) {
     var startIdx = (pg.page - 1) * pg.size;
     var pageData = _pgSlice('po', filtered);
 
+    function safeCell(v, maxLen) {
+        var s = (v == null ? '' : String(v));
+        s = s.replace(/\s+/g, ' ').trim();
+        if (maxLen && s.length > maxLen) s = s.slice(0, maxLen - 1) + '...';
+        return escHtml(s);
+    }
+
     let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>PO No</th><th>Date</th><th>Vendor</th><th>Event</th><th>Location</th><th>Total</th><th>Actions</th></tr></thead><tbody>';
     pageData.forEach((po, i) => {
         var displayIdx = startIdx + i;
         var idx = allData.indexOf(po);
+        var poNo = safeCell(po.po_no, 40);
+        var poDate = safeCell(po.po_date, 24);
+        var vendor = safeCell(po.vendor_name, 64);
+        var eventName = safeCell(po.event_name, 56);
+        var eventLocation = safeCell(po.event_location, 72);
+        var totalNum = _getPOTotal_(po);
         html += '<tr>';
         html += '<td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td>';
-        html += '<td><span class="font-semibold text-primary">' + (po.po_no || '') + '</span></td>';
-        html += '<td class="text-slate-600">' + (po.po_date || '') + '</td>';
-        html += '<td class="font-medium">' + (po.vendor_name || '') + '</td>';
-        html += '<td class="text-slate-600">' + (po.event_name || '') + '</td>';
-        html += '<td class="text-slate-500 text-xs">' + (po.event_location || '') + '</td>';
-        html += '<td><span class="font-mono font-semibold text-emerald-600">' + (po.total ? '₹' + Number(po.total).toLocaleString('en-IN') : '') + '</span></td>';
+        html += '<td><span class="font-semibold text-primary" title="' + poNo + '">' + poNo + '</span></td>';
+        html += '<td class="text-slate-600">' + poDate + '</td>';
+        html += '<td class="font-medium" title="' + vendor + '">' + vendor + '</td>';
+        html += '<td class="text-slate-600" title="' + eventName + '">' + eventName + '</td>';
+        html += '<td class="text-slate-500 text-xs" title="' + eventLocation + '">' + eventLocation + '</td>';
+        html += '<td><span class="font-mono font-semibold text-emerald-600">' + (totalNum ? '₹' + Number(totalNum).toLocaleString('en-IN') : '') + '</span></td>';
         html += '<td>';
         html += '<div class="flex flex-wrap gap-1">';
         html += '<a href="po-view.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-primary btn-outline btn-modern" title="View"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>';
