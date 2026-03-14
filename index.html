@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="page-bg min-h-screen">
-    <div class="drawer lg:drawer-open">
+    <div class="app-shell min-h-screen flex">
       <input id="main-drawer" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content flex flex-col">
+      <div class="app-main drawer-content flex-1 min-h-screen flex flex-col">
         <!-- Navbar -->
         <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
           <div class="flex-none lg:hidden">
@@ -31,17 +31,17 @@
             <div class="hero-bg-blob w-48 h-48 bg-yellow-300" style="top:-20px;right:10%;"></div>
             <div class="hero-bg-blob w-56 h-56 bg-pink-300" style="bottom:-40px;right:-20px;"></div>
             <div class="hero-content">
-              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                <div class="flex items-center gap-3 mb-2 lg:mb-0">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-w-0">
+                <div class="flex items-start gap-3 mb-2 lg:mb-0 min-w-0">
                 <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" /></svg>
                 </div>
-                <div>
-                  <h1 class="hero-title text-2xl">Welcome to PO Manager</h1>
+                <div class="min-w-0">
+                  <h1 class="hero-title text-2xl leading-tight">Welcome to PO Manager</h1>
                   <p class="hero-subtitle">RANGA ELECTRICALS PVT LTD</p>
                 </div>
               </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span id="dashboardDate" class="badge-soft bg-white/25 text-white border-white/30">--</span>
                   <button type="button" onclick="refreshDashboard()" class="btn btn-xs bg-white/20 border-white/30 text-white hover:bg-white/30">
                     Refresh
@@ -266,8 +266,8 @@
         </div>
       </div>
       <!-- Sidebar -->
-      <div class="drawer-side">
-        <label for="main-drawer" class="drawer-overlay"></label>
+      <div class="app-sidebar-shell drawer-side">
+        <label for="main-drawer" class="drawer-overlay app-overlay"></label>
         <aside class="modern-sidebar flex flex-col w-64 min-h-full">
           <div class="sidebar-brand">
             <div class="brand-title">PO Manager</div>
@@ -515,10 +515,11 @@
 
         var hs = document.getElementById('dashboardHeroStats');
         if (hs) {
+          var topVendorName = summary.topVendors[0] ? summary.topVendors[0].name : 'NA';
           hs.innerHTML = ''
             + '<div class="hero-stat"><div class="stat-label">PO Value</div><div class="stat-value">' + toMoney(summary.totalPOValue) + '</div></div>'
             + '<div class="hero-stat"><div class="stat-label">This Month</div><div class="stat-value">' + summary.monthPOs + ' POs</div></div>'
-            + '<div class="hero-stat"><div class="stat-label">Top Vendor</div><div class="stat-value">' + escHtml(summary.topVendors[0] ? summary.topVendors[0].name : 'NA') + '</div></div>';
+            + '<div class="hero-stat"><div class="stat-label">Top Vendor</div><div class="stat-value stat-value-vendor">' + escHtml(topVendorName) + '</div></div>';
         }
 
         renderTrendBars(summary);

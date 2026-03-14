@@ -224,11 +224,161 @@ function logout() {
     }
 }
 
+var SIDEBAR_COLLAPSE_KEY = 'po_sidebar_collapsed_desktop';
+
+function _isMobileViewport_() {
+    return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function _isTabletViewport_() {
+    return window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches;
+}
+
+function _isSidebarCollapsedDesktop_() {
+    return localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+}
+
+function _setSidebarCollapsedDesktop_(collapsed) {
+    localStorage.setItem(SIDEBAR_COLLAPSE_KEY, collapsed ? '1' : '0');
+}
+
+function _isSidebarIconMode_() {
+    if (_isTabletViewport_()) return true;
+    if (_isMobileViewport_()) return false;
+    var t = document.querySelector('.drawer-toggle');
+    return !!(t && !t.checked);
+}
+
+function applySidebarModeClass() {
+    if (!document.body) return;
+    document.body.classList.toggle('sidebar-mobile-mode', _isMobileViewport_());
+    document.body.classList.toggle('sidebar-tablet-mode', _isTabletViewport_());
+    document.body.classList.toggle('sidebar-desktop-mode', !_isMobileViewport_() && !_isTabletViewport_());
+    document.body.classList.toggle('sidebar-icon-mode', _isSidebarIconMode_());
+}
+
+function refreshSidebarLinkTooltips() {
+    var iconMode = _isSidebarIconMode_();
+    document.querySelectorAll('.drawer-side .menu a').forEach(function(a) {
+        var label = a.textContent.replace(/\s+/g, ' ').trim();
+        if (!label) return;
+        a.setAttribute('aria-label', label);
+        if (iconMode) {
+            a.classList.add('tooltip', 'tooltip-right');
+            a.setAttribute('data-tip', label);
+            a.setAttribute('title', label);
+        } else {
+            a.classList.remove('tooltip', 'tooltip-right');
+            a.removeAttribute('data-tip');
+            a.removeAttribute('title');
+        }
+    });
+}
+
+function normalizeDrawerForViewport() {
+    var isMobile = _isMobileViewport_();
+    var isTablet = _isTabletViewport_();
+    var collapsedDesktop = _isSidebarCollapsedDesktop_();
+    var toggles = document.querySelectorAll('.drawer-toggle');
+    toggles.forEach(function(t) {
+        if (isMobile) t.checked = false;
+        else if (isTablet) t.checked = false;
+        else t.checked = !collapsedDesktop;
+    });
+    applySidebarModeClass();
+    refreshSidebarLinkTooltips();
+}
+
+function forceCloseDrawerMobile() {
+    if (!_isMobileViewport_()) return;
+    document.querySelectorAll('.drawer-toggle').forEach(function(t) {
+        t.checked = false;
+    });
+}
+
+function bindSidebarInteractions() {
+    if (window.__poSidebarInteractionsBound) return;
+    window.__poSidebarInteractionsBound = true;
+
+    function closeOnMobile() {
+        if (!_isMobileViewport_()) return;
+        document.querySelectorAll('.drawer-toggle').forEach(function(t) { t.checked = false; });
+    }
+
+    document.querySelectorAll('.drawer-toggle').forEach(function(t) {
+        t.addEventListener('change', function() {
+            if (_isMobileViewport_() || _isTabletViewport_()) {
+                applySidebarModeClass();
+                refreshSidebarLinkTooltips();
+                return;
+            }
+            _setSidebarCollapsedDesktop_(!t.checked);
+            applySidebarModeClass();
+            refreshSidebarLinkTooltips();
+        });
+    });
+
+    // Close drawer after selecting a sidebar link on mobile.
+    document.querySelectorAll('.drawer-side .menu a').forEach(function(a) {
+        a.addEventListener('click', function() {
+            closeOnMobile();
+        });
+    });
+
+    // Overlay click should always close drawer on mobile.
+    document.querySelectorAll('.drawer-overlay').forEach(function(overlay) {
+        overlay.addEventListener('click', function() {
+            closeOnMobile();
+        });
+    });
+
+    // Esc key closes open drawer on mobile.
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        closeOnMobile();
+    });
+
+    // Re-evaluate tooltip/icon mode after sidebar links are injected.
+    setTimeout(function() {
+        applySidebarModeClass();
+        refreshSidebarLinkTooltips();
+    }, 80);
+}
+
+function bindResponsiveLayoutGuards() {
+    if (window.__poResponsiveGuardsBound) return;
+    window.__poResponsiveGuardsBound = true;
+
+    // Some mobile browsers restore checkbox state on history navigation.
+    window.addEventListener('pageshow', function() {
+        forceCloseDrawerMobile();
+    });
+
+    var timer = null;
+    window.addEventListener('resize', function() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function() {
+            forceCloseDrawerMobile();
+            normalizeDrawerForViewport();
+            applySidebarModeClass();
+            refreshSidebarLinkTooltips();
+        }, 120);
+    });
+}
+
 // Master init for auth on every page — call from window.onload
 function initPageAuth() {
     if (!requireAuth()) return false;
+    bindSidebarInteractions();
+    bindResponsiveLayoutGuards();
+    forceCloseDrawerMobile();
+    normalizeDrawerForViewport();
+    setTimeout(forceCloseDrawerMobile, 60);
+    requestAnimationFrame(forceCloseDrawerMobile);
     injectNavbarAuth();
     injectSidebarAuthLinks();
+    applySidebarModeClass();
+    refreshSidebarLinkTooltips();
     // Load seal/settings from backend (overrides seal.js if stored)
     loadSealFromSettings();
     // Defer role restrictions so page content renders first

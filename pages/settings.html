@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="../style.css">
 </head>
 <body class="page-bg min-h-screen">
-    <div class="drawer lg:drawer-open">
+    <div class="app-shell min-h-screen flex">
       <input id="main-drawer" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content flex flex-col">
+      <div class="app-main drawer-content flex-1 min-h-screen flex flex-col">
         <!-- Navbar -->
         <div class="w-full navbar modern-navbar px-4 sticky top-0 z-30">
           <div class="flex-none lg:hidden">
@@ -208,9 +208,9 @@
         </div>
       </div>
       <!-- Sidebar -->
-      <div class="drawer-side">
-        <label for="main-drawer" class="drawer-overlay"></label>
-        <aside class="modern-sidebar flex flex-col w-64 min-h-full">
+      <div class="app-sidebar-shell drawer-side">
+        <label for="main-drawer" class="drawer-overlay app-overlay"></label>
+        <aside class="modern-sidebar">
           <div class="sidebar-brand">
             <div class="brand-title">PO Manager</div>
             <div class="brand-subtitle">Ranga Electricals</div>

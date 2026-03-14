@@ -13,9 +13,9 @@
     <script src="../seal.js"></script>
 </head>
 <body class="page-bg min-h-screen">
-    <div class="drawer">
+    <div class="app-shell min-h-screen flex">
       <input id="main-drawer" type="checkbox" class="drawer-toggle" />
-      <div class="drawer-content flex flex-col">
+      <div class="app-main drawer-content flex-1 min-h-screen flex flex-col">
         <!-- Header -->
         <div class="w-full navbar modern-navbar sticky top-0 z-30 px-4">
           <div class="flex-none">
@@ -36,7 +36,7 @@
           </div>
           <div class="flex flex-col lg:flex-row gap-4 items-start">
             <!-- LEFT: Form -->
-            <div class="w-full lg:w-1/2 lg:min-w-[420px] flex-shrink-0">
+            <div class="w-full lg:w-1/2 xl:min-w-[420px] flex-shrink-0">
           <div class="card bg-base-100 shadow border border-base-300 compact-form">
             <div class="card-body">
               <form id="poForm">
@@ -193,8 +193,8 @@
         </div>
       </div>
       <!-- Sidebar -->
-      <div class="drawer-side">
-        <label for="main-drawer" class="drawer-overlay"></label>
+      <div class="app-sidebar-shell drawer-side">
+        <label for="main-drawer" class="drawer-overlay app-overlay"></label>
         <aside class="modern-sidebar">
           <div class="sidebar-brand">PO Manager</div>
           <ul class="menu menu-md p-4 gap-1 flex-1">
