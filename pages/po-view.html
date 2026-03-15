@@ -30,7 +30,7 @@
           <a href="po-list.html" class="btn btn-ghost btn-sm">← Back to List</a>
         </div>
         <!-- Main Content -->
-        <div class="p-6 max-w-5xl mx-auto w-full">
+        <div class="p-2 sm:p-6 max-w-5xl mx-auto w-full">
           <div id="poView" class="modern-card">
             <div class="card-body">
               <div class="flex justify-center py-8"><span class="loading loading-spinner loading-lg"></span></div>
@@ -105,20 +105,20 @@
         let grandTotal = po.total || (subtotal + cgstAmt + sgstAmt);
         let totalQty = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
 
-        let html = '<div class="card-body p-4 md:p-6">';
+        let html = '<div class="card-body p-3 sm:p-5">';
 
         // Action buttons
-        html += '<div class="flex flex-wrap gap-2 mb-6 no-print">';
-        html += '<a href="po-edit.html?id=' + encodeURIComponent(po.po_no) + '" class="btn btn-warning btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Edit</a>';
-        html += '<button onclick="downloadPDF()" class="btn btn-error btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> PDF</button>';
-        html += '<button onclick="downloadExcel()" class="btn btn-success btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Excel</button>';
-        html += '<button onclick="window.print()" class="btn btn-ghost btn-sm gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg> Print</button>';
-        html += '<label class="flex items-center gap-1.5 ml-2 cursor-pointer select-none"><input type="checkbox" id="includeSignToggle" class="checkbox checkbox-xs checkbox-primary" checked><span class="text-xs font-medium">Include Seal</span></label>';
+        html += '<div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 mb-4 no-print">';
+        html += '<a href="po-edit.html?id=' + encodeURIComponent(po.po_no) + '" class="btn btn-warning btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Edit</a>';
+        html += '<button onclick="downloadPDF()" class="btn btn-error btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> PDF</button>';
+        html += '<button onclick="downloadExcel()" class="btn btn-success btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Excel</button>';
+        html += '<button onclick="window.print()" class="btn btn-ghost btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg> Print</button>';
+        html += '<label class="col-span-2 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 sm:ml-2 cursor-pointer select-none"><input type="checkbox" id="includeSignToggle" class="checkbox checkbox-xs checkbox-primary" checked><span class="text-xs font-medium">Include Seal</span></label>';
         html += '</div>';
 
         // -- Company Header --
         html += '<div class="text-center border-b-2 border-base-300 pb-3 mb-4">';
-        html += '<div class="text-2xl font-extrabold tracking-wide text-primary">RANGA ELECTRICALS PVT LTD</div>';
+        html += '<div class="text-base sm:text-2xl font-extrabold tracking-wide text-primary">RANGA ELECTRICALS PVT LTD</div>';
         html += '<div class="text-xs text-base-content/60">NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.</div>';
         html += '<div class="text-xs text-base-content/60">E-mail: info@rangaelectrical.com</div>';
         html += '<div class="text-xs font-semibold mt-1">GST IN: 33AAHCR4037J1ZD</div>';
@@ -146,26 +146,37 @@
         html += '<div class="text-sm mb-3 text-base-content/70 italic">We are pleased to place our order in your favour for the supply of following items</div>';
 
         // -- Items Table --
-        html += '<div class="overflow-x-auto rounded-lg border border-base-300 mb-4">';
-        html += '<table class="table table-sm w-full">';
-        html += '<thead><tr class="bg-base-200"><th>Sl.No</th><th>Item Description</th><th class="text-right">Quantity</th><th>UOM</th><th class="text-right">Per Day Amount</th><th class="text-right">No of Days</th><th class="text-right">Total Value (In INR)</th></tr></thead><tbody>';
+        html += '<div class="rounded-lg border border-base-300 mb-4 overflow-x-auto po-view-items-wrap">';
+        html += '<table class="table table-sm w-full po-view-items-table">';
+        html += '<thead><tr class="bg-base-200"><th>#</th><th>Item Description</th><th class="text-right">Qty</th><th>UOM</th><th class="text-right">Rate/Day</th><th class="text-right">Days</th><th class="text-right">Total (\u20b9)</th></tr></thead><tbody>';
         items.forEach((item, idx) => {
           html += '<tr>';
-          html += '<td>' + (idx + 1) + '</td>';
-          html += '<td>' + (item.desc || '') + '</td>';
-          html += '<td class="text-right">' + (item.qty || '') + '</td>';
-          html += '<td>' + (item.uom || '') + '</td>';
-          html += '<td class="text-right">' + fmt(item.per_day) + '</td>';
-          html += '<td class="text-right">' + fmt(item.days) + '</td>';
-          html += '<td class="text-right font-semibold">' + fmt(item.total) + '</td>';
+          html += '<td class="po-view-slno-td">' + (idx + 1) + '</td>';
+          html += '<td data-label="Description">' + (item.desc || '') + '</td>';
+          html += '<td data-label="Qty">' + (item.qty || '') + '</td>';
+          html += '<td data-label="UOM">' + (item.uom || '') + '</td>';
+          html += '<td data-label="Rate/Day">' + fmt(item.per_day) + '</td>';
+          html += '<td data-label="Days">' + fmt(item.days) + '</td>';
+          html += '<td data-label="Total" class="font-semibold">' + fmt(item.total) + '</td>';
           html += '</tr>';
         });
         if (transport > 0) {
-          html += '<tr class="bg-base-200/50"><td>' + (items.length + 1) + '</td><td>TRANSPORT CHARGES</td><td class="text-right"></td><td></td><td class="text-right"></td><td class="text-right"></td><td class="text-right font-semibold">' + fmt(transport) + '</td></tr>';
+          html += '<tr>';
+          html += '<td class="po-view-slno-td">' + (items.length + 1) + '</td>';
+          html += '<td data-label="Description" class="font-semibold">TRANSPORT CHARGES</td>';
+          html += '<td data-label="Qty"></td><td data-label="UOM"></td><td data-label="Rate/Day"></td><td data-label="Days"></td>';
+          html += '<td data-label="Total" class="font-semibold">' + fmt(transport) + '</td>';
+          html += '</tr>';
         }
         html += '</tbody>';
-        html += '<tfoot><tr class="font-bold bg-base-200"><td colspan="2">Total</td><td class="text-right">' + totalQty + '</td><td colspan="3"></td><td class="text-right">' + fmt(subtotal) + '</td></tr></tfoot>';
-        html += '</table></div>';
+        html += '<tfoot class="po-view-tfoot"><tr class="font-bold bg-base-200"><td colspan="2">Total</td><td class="text-right">' + totalQty + '</td><td colspan="3"></td><td class="text-right">' + fmt(subtotal) + '</td></tr></tfoot>';
+        html += '</table>';
+        html += '<div class="po-view-mobile-total">';
+        html += '<div class="flex justify-between items-center px-4 py-2.5">';
+        html += '<span class="text-sm font-semibold text-base-content/60">' + (items.length + (transport > 0 ? 1 : 0)) + ' item(s) &nbsp;&bull;&nbsp; Qty: ' + totalQty + '</span>';
+        html += '<span class="text-base font-extrabold text-primary">\u20b9' + fmt(subtotal) + '</span>';
+        html += '</div></div>';
+        html += '</div>';
 
         // -- GST & Grand Total --
         html += '<div class="flex justify-end mb-4"><div class="w-full md:w-1/2 space-y-1 text-sm">';

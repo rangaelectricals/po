@@ -1344,6 +1344,134 @@ function deleteVendor(idx) {
     .catch(err => alert('Error deleting vendor: ' + err.message));
 }
 
+// ============================================================
+// BULK UPLOAD — VERIFICATION PREVIEW MODAL
+// ============================================================
+function _ensureBulkPreviewModal_() {
+    var dlg = document.getElementById('appBulkPreviewModal');
+    if (dlg) return dlg;
+    dlg = document.createElement('dialog');
+    dlg.id = 'appBulkPreviewModal';
+    dlg.className = 'modal modal-bottom sm:modal-middle';
+    dlg.innerHTML =
+        '<div class="modal-box bulk-preview-box">' +
+        '  <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" id="bulkPreviewCloseX">✕</button>' +
+        '  <h3 id="bulkPreviewTitle" class="font-bold text-lg pr-8">Verify Upload Data</h3>' +
+        '  <p id="bulkPreviewSubtitle" class="text-xs text-base-content/55 mt-1 mb-3"></p>' +
+        '  <div id="bulkPreviewStats" class="bulk-preview-stats"></div>' +
+        '  <div class="bulk-preview-table-wrap">' +
+        '    <table id="bulkPreviewTable" class="table table-xs w-full">' +
+        '      <thead id="bulkPreviewThead"></thead>' +
+        '      <tbody id="bulkPreviewTbody"></tbody>' +
+        '    </table>' +
+        '  </div>' +
+        '  <div class="modal-action pt-3 border-t border-base-200">' +
+        '    <button type="button" id="bulkPreviewCancel" class="btn btn-ghost btn-sm">Cancel</button>' +
+        '    <button type="button" id="bulkPreviewConfirm" class="btn btn-primary btn-sm gap-1.5">' +
+        '      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3 3m0 0l-3-3m3 3V8"/></svg>' +
+        '      Confirm &amp; Upload' +
+        '    </button>' +
+        '  </div>' +
+        '</div>' +
+        '<form method="dialog" class="modal-backdrop"><button>close</button></form>';
+    document.body.appendChild(dlg);
+    return dlg;
+}
+
+/**
+ * showBulkPreview_(config)
+ * config = {
+ *   title, subtitle,
+ *   headers: [{key, label, required}],
+ *   rows: allMapped,
+ *   validRows: filteredValid,
+ *   onConfirm(validRows), onCancel()
+ * }
+ */
+function showBulkPreview_(config) {
+    var dlg = _ensureBulkPreviewModal_();
+    var titleEl  = document.getElementById('bulkPreviewTitle');
+    var subEl    = document.getElementById('bulkPreviewSubtitle');
+    var statsEl  = document.getElementById('bulkPreviewStats');
+    var thead    = document.getElementById('bulkPreviewThead');
+    var tbody    = document.getElementById('bulkPreviewTbody');
+    var btnOk    = document.getElementById('bulkPreviewConfirm');
+    var btnX     = document.getElementById('bulkPreviewCloseX');
+    var btnCancel= document.getElementById('bulkPreviewCancel');
+
+    var allRows   = config.rows || [];
+    var validRows = config.validRows || allRows;
+    var skipped   = allRows.length - validRows.length;
+    var validSet  = new Set(validRows);
+
+    titleEl.textContent = config.title || 'Verify Upload Data';
+    subEl.textContent   = config.subtitle || '';
+
+    // Stats bar
+    statsEl.innerHTML =
+        '<div class="bulk-stat bulk-stat-total"><span class="bulk-stat-num">' + allRows.length + '</span><span class="bulk-stat-lbl">Total Rows</span></div>' +
+        '<div class="bulk-stat bulk-stat-valid"><span class="bulk-stat-num">' + validRows.length + '</span><span class="bulk-stat-lbl">Valid</span></div>' +
+        (skipped > 0 ? '<div class="bulk-stat bulk-stat-skip"><span class="bulk-stat-num">' + skipped + '</span><span class="bulk-stat-lbl">Skipped</span></div>' : '');
+
+    // Table header
+    thead.innerHTML = '<tr class="bulk-preview-thead-row">' +
+        '<th class="bulk-col-no">#</th>' +
+        (config.headers || []).map(function(h) {
+            return '<th>' + escHtml(h.label) + (h.required ? '<span class="bulk-req-star">*</span>' : '') + '</th>';
+        }).join('') +
+        '<th class="bulk-col-status">Status</th>' +
+        '</tr>';
+
+    // Table body
+    tbody.innerHTML = allRows.map(function(row, i) {
+        var isValid = validSet.has(row);
+        var cellsHtml = (config.headers || []).map(function(h) {
+            var val = row[h.key];
+            if (val === undefined || val === null) val = '';
+            var sval = String(val).trim();
+            var missing = h.required && !sval;
+            return '<td class="' + (missing ? 'bulk-cell-missing' : '') + '" data-label="' + escHtml(h.label) + '">' +
+                (sval ? escHtml(sval) : '<span class="bulk-empty-cell">—</span>') + '</td>';
+        }).join('');
+        var badge = isValid
+            ? '<span class="bulk-badge-valid">✓ Valid</span>'
+            : '<span class="bulk-badge-skip">✗ Skipped</span>';
+        return '<tr class="' + (isValid ? '' : 'bulk-row-invalid') + '">' +
+            '<td class="bulk-col-no" data-label="#">' + (i + 1) + '</td>' +
+            cellsHtml +
+            '<td class="bulk-col-status" data-label="Status">' + badge + '</td>' +
+            '</tr>';
+    }).join('');
+
+    // Confirm button disability
+    btnOk.disabled = validRows.length === 0;
+    btnOk.classList.toggle('btn-disabled', validRows.length === 0);
+
+    function _close_() {
+        btnOk.onclick = null;
+        btnCancel.onclick = null;
+        btnX.onclick = null;
+        dlg.onclose = null;
+    }
+    function _cancel_() { _close_(); dlg.close(); if (config.onCancel) config.onCancel(); }
+
+    btnCancel.onclick = _cancel_;
+    btnX.onclick = _cancel_;
+    dlg.onclose = function() { _close_(); };
+
+    btnOk.onclick = function() {
+        if (validRows.length === 0) return;
+        _close_();
+        dlg.close();
+        if (config.onConfirm) config.onConfirm(validRows);
+    };
+
+    dlg.showModal();
+}
+
+// ============================================================
+// VENDOR MASTER — BULK UPLOAD
+// ============================================================
 function triggerVendorBulkUpload() {
     if (!canBulkUploadMasters()) return;
     var inp = $('vendorBulkFile');
@@ -1360,7 +1488,7 @@ function handleVendorBulkFile(input) {
             return;
         }
 
-        var mapped = rows.map(function(r) {
+        var allMapped = rows.map(function(r) {
             var name = r.name || r.vendor_name || r.vendor || r['Vendor Name'] || r['Name'] || '';
             var address = r.address || r.vendor_address || r['Vendor Address'] || '';
             var gstin = r.gstin || r.gst || r.vendor_gstin || r['GSTIN'] || '';
@@ -1369,29 +1497,38 @@ function handleVendorBulkFile(input) {
                 address: String(address || '').trim(),
                 gstin: String(gstin || '').trim()
             };
-        }).filter(function(r) { return r.name; });
+        });
+        var validRows = allMapped.filter(function(r) { return r.name; });
 
-        if (!mapped.length) {
-            showToast('No valid vendor rows found. Required: name.', 'warning');
-            input.value = '';
-            return;
-        }
-
-        gsPost({ action: 'bulk_upsert_vendors', rows: mapped })
-        .then(function(resp) {
-            if (resp.success) {
-                invalidateCache('read_vendors');
-                invalidateCache('read_all');
-                fetchVendors();
-                showToast('Vendor bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
-            } else {
-                showToast('Vendor bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+        showBulkPreview_({
+            title: 'Verify Vendor Upload',
+            subtitle: 'File: ' + file.name + '  •  ' + rows.length + ' row(s) read — review below before uploading.',
+            headers: [
+                { key: 'name',    label: 'Vendor Name', required: true  },
+                { key: 'address', label: 'Address',     required: false },
+                { key: 'gstin',   label: 'GSTIN',       required: false }
+            ],
+            rows: allMapped,
+            validRows: validRows,
+            onCancel: function() { input.value = ''; },
+            onConfirm: function(confirmed) {
+                gsPost({ action: 'bulk_upsert_vendors', rows: confirmed })
+                .then(function(resp) {
+                    if (resp.success) {
+                        invalidateCache('read_vendors');
+                        invalidateCache('read_all');
+                        fetchVendors();
+                        showToast('Vendor bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+                    } else {
+                        showToast('Vendor bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+                    }
+                    input.value = '';
+                })
+                .catch(function(err) {
+                    showToast('Vendor bulk upload failed: ' + err.message, 'error');
+                    input.value = '';
+                });
             }
-            input.value = '';
-        })
-        .catch(function(err) {
-            showToast('Vendor bulk upload failed: ' + err.message, 'error');
-            input.value = '';
         });
     });
 }
@@ -1540,7 +1677,7 @@ function handleItemBulkFile(input) {
             return;
         }
 
-        var mapped = rows.map(function(r) {
+        var allMapped = rows.map(function(r) {
             var desc = r.desc || r.description || r.item || r['Item Description'] || r['Description'] || '';
             var uom = r.uom || r.unit || r['UOM'] || 'NOS';
             var rate = r.rate || r.per_day || r['Rate/Day'] || 0;
@@ -1551,29 +1688,39 @@ function handleItemBulkFile(input) {
                 rate: Number(rate) || 0,
                 default_qty: parseInt(defaultQty, 10) || 1
             };
-        }).filter(function(r) { return r.desc; });
+        });
+        var validRows = allMapped.filter(function(r) { return r.desc; });
 
-        if (!mapped.length) {
-            showToast('No valid item rows found. Required: desc/description.', 'warning');
-            input.value = '';
-            return;
-        }
-
-        gsPost({ action: 'bulk_upsert_items', rows: mapped })
-        .then(function(resp) {
-            if (resp.success) {
-                invalidateCache('read_items');
-                invalidateCache('read_all');
-                fetchItemMaster();
-                showToast('Item bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
-            } else {
-                showToast('Item bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+        showBulkPreview_({
+            title: 'Verify Item Upload',
+            subtitle: 'File: ' + file.name + '  •  ' + rows.length + ' row(s) read — review below before uploading.',
+            headers: [
+                { key: 'desc',        label: 'Description', required: true  },
+                { key: 'uom',         label: 'UOM',         required: false },
+                { key: 'rate',        label: 'Rate/Day',    required: false },
+                { key: 'default_qty', label: 'Default Qty', required: false }
+            ],
+            rows: allMapped,
+            validRows: validRows,
+            onCancel: function() { input.value = ''; },
+            onConfirm: function(confirmed) {
+                gsPost({ action: 'bulk_upsert_items', rows: confirmed })
+                .then(function(resp) {
+                    if (resp.success) {
+                        invalidateCache('read_items');
+                        invalidateCache('read_all');
+                        fetchItemMaster();
+                        showToast('Item bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+                    } else {
+                        showToast('Item bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+                    }
+                    input.value = '';
+                })
+                .catch(function(err) {
+                    showToast('Item bulk upload failed: ' + err.message, 'error');
+                    input.value = '';
+                });
             }
-            input.value = '';
-        })
-        .catch(function(err) {
-            showToast('Item bulk upload failed: ' + err.message, 'error');
-            input.value = '';
         });
     });
 }
@@ -2148,10 +2295,11 @@ function handlePOBulkFile(input) {
             return;
         }
 
-        var mapped = rows.map(function(r) {
+        var allMapped = rows.map(function(r) {
             var poNo = r.po_no || r.po || r['PO No'] || r['PO Number'] || '';
             var poDate = r.po_date || r.date || r['PO Date'] || '';
             var vendorName = r.vendor_name || r.vendor || r['Vendor Name'] || '';
+            var parsedItems = _parsePOItemsForBulk(r);
             return {
                 po_no: String(poNo || '').trim(),
                 po_date: String(poDate || '').trim(),
@@ -2166,33 +2314,58 @@ function handlePOBulkFile(input) {
                 cgst_percent: parseFloat(r.cgst_percent || r.cgst || 0) || 0,
                 sgst_percent: parseFloat(r.sgst_percent || r.sgst || 0) || 0,
                 terms: String(r.terms || r['Terms'] || '').trim(),
-                items: _parsePOItemsForBulk(r)
+                items: parsedItems,
+                _items_count: parsedItems.length   // display helper
             };
-        }).filter(function(r) {
+        });
+        var validRows = allMapped.filter(function(r) {
             return r.po_no && r.po_date && r.vendor_name;
         });
 
-        if (!mapped.length) {
-            showToast('No valid PO rows found. Required: po_no, po_date, vendor_name.', 'warning');
-            input.value = '';
-            return;
-        }
+        // Build display rows that show items as a simple count string
+        var displayRows = allMapped.map(function(r) {
+            return Object.assign({}, r, {
+                items: r._items_count ? r._items_count + ' item(s)' : '—'
+            });
+        });
+        var displayValid = validRows.map(function(r) {
+            return displayRows[allMapped.indexOf(r)];
+        });
 
-        gsPost({ action: 'bulk_upsert_pos', rows: mapped })
-        .then(function(resp) {
-            if (resp.success) {
-                invalidateCache('read');
-                invalidateCache('read_all');
-                fetchPOs();
-                showToast('PO bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
-            } else {
-                showToast('PO bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+        showBulkPreview_({
+            title: 'Verify PO Upload',
+            subtitle: 'File: ' + file.name + '  •  ' + rows.length + ' row(s) read — review below before uploading.',
+            headers: [
+                { key: 'po_no',         label: 'PO No',       required: true  },
+                { key: 'po_date',       label: 'Date',        required: true  },
+                { key: 'vendor_name',   label: 'Vendor',      required: true  },
+                { key: 'event_name',    label: 'Event',       required: false },
+                { key: 'event_location',label: 'Location',    required: false },
+                { key: 'transport',     label: 'Transport',   required: false },
+                { key: 'items',         label: 'Items',       required: false }
+            ],
+            rows: displayRows,
+            validRows: displayValid,
+            onCancel: function() { input.value = ''; },
+            onConfirm: function(/* displayValid is passed, but we need original rows */) {
+                // Use the original validRows (with actual items arrays, not display strings)
+                gsPost({ action: 'bulk_upsert_pos', rows: validRows })
+                .then(function(resp) {
+                    if (resp.success) {
+                        invalidateCache('read');
+                        invalidateCache('read_all');
+                        fetchPOs();
+                        showToast('PO bulk upload complete. Added: ' + (resp.added || 0) + ', Updated: ' + (resp.updated || 0), 'success');
+                    } else {
+                        showToast('PO bulk upload failed: ' + (resp.error || 'Unknown error'), 'error');
+                    }
+                    input.value = '';
+                })
+                .catch(function(err) {
+                    showToast('PO bulk upload failed: ' + err.message, 'error');
+                    input.value = '';
+                });
             }
-            input.value = '';
-        })
-        .catch(function(err) {
-            showToast('PO bulk upload failed: ' + err.message, 'error');
-            input.value = '';
         });
     });
 }
