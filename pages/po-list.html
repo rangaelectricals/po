@@ -31,26 +31,28 @@
         <!-- Main Content -->
         <div class="p-4 lg:p-6 animate-fadeIn">
           <!-- Hero Header -->
-          <div class="page-hero bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 animate-slideDown">
-            <div class="hero-bg-blob w-64 h-64 bg-white" style="top:-40px;left:-20px;"></div>
-            <div class="hero-bg-blob w-48 h-48 bg-cyan-300" style="top:-20px;right:10%;"></div>
-            <div class="hero-bg-blob w-56 h-56 bg-pink-300" style="bottom:-40px;right:-20px;"></div>
-            <div class="hero-content flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-              <div class="flex items-center gap-3">
-                <div class="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                </div>
-                <div>
-                  <h1 class="hero-title">Purchase Orders</h1>
-                  <p class="hero-subtitle">View, manage, and export all purchase orders</p>
+          <div class="page-hero animate-slideDown">
+            <div class="hero-content">
+              <div class="hero-main">
+              <div class="hero-left">
+                <div class="hero-title-wrap">
+                  <div class="hero-icon-shell">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  </div>
+                  <div class="min-w-0">
+                    <h1 class="hero-title">Purchase Orders</h1>
+                    <p class="hero-subtitle">Track approvals, export records, and keep procurement decisions visible in one place.</p>
+                  </div>
                 </div>
               </div>
-              <div class="flex items-center gap-3">
+
+              <div class="hero-right">
                 <div class="hero-stats" id="poHeroStats"></div>
-                <a href="add-po.html" class="btn btn-sm bg-white/20 backdrop-blur-sm border-white/30 text-white hover:bg-white/30 btn-modern crud-action" data-po-edit>
+                <a href="add-po.html" class="btn btn-sm btn-modern crud-action" data-po-edit>
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                   New PO
                 </a>
+              </div>
               </div>
             </div>
           </div>
@@ -70,7 +72,7 @@
             <span class="text-xs text-base-content/60">Required: <code>po_no</code>, <code>po_date</code>, <code>vendor_name</code>. Optional: <code>items_json</code> or <code>item_desc/qty/uom/rate/days</code>.</span>
           </div>
 
-          <div class="modern-card mb-4">
+          <div class="modern-card mb-4 po-list-toolbar-card">
             <div class="card-content">
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 items-end">
                 <div class="form-control lg:col-span-2">
@@ -112,8 +114,55 @@
             </div>
           </div>
 
+          <div class="modern-card mb-4">
+            <div class="card-content po-list-toolbar">
+              <div class="form-control flex-1 min-w-[220px] max-w-lg">
+                <label class="label py-0.5"><span class="label-text text-xs">Global Search</span></label>
+                <input id="poSearchInput" type="text" placeholder="Search PO, vendor, location, event..." class="input input-bordered" oninput="handleGlobalSearch(this.value)">
+              </div>
+
+              <div class="mt-5 join">
+                <button id="poTableViewBtn" type="button" class="btn btn-sm join-item po-view-btn active" onclick="setTableView('table')">Table</button>
+                <button id="poCardViewBtn" type="button" class="btn btn-sm btn-outline join-item po-view-btn" onclick="setTableView('cards')">Cards</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modern-card mb-4">
+            <button type="button" class="card-header w-full justify-between" onclick="toggleAdvancedFilters()" aria-expanded="false" aria-controls="advancedFiltersContent">
+              <div class="flex items-center gap-2">
+                <svg id="advancedFilterIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                <span class="header-title">Advanced Filters</span>
+              </div>
+              <span id="advancedFilterCount" class="badge badge-ghost badge-sm">0 active</span>
+            </button>
+            <div id="advancedFiltersContent" class="card-content hidden">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">Minimum Amount</span></label>
+                  <input id="filterMinAmount" type="number" min="0" step="1" class="input input-bordered input-sm" onchange="applyAdvancedFilters()" placeholder="0">
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">Maximum Amount</span></label>
+                  <input id="filterMaxAmount" type="number" min="0" step="1" class="input input-bordered input-sm" onchange="applyAdvancedFilters()" placeholder="No limit">
+                </div>
+                <div class="form-control">
+                  <label class="label py-0.5"><span class="label-text text-xs">With Line Items</span></label>
+                  <select id="filterHasItems" class="select select-bordered select-sm" onchange="applyAdvancedFilters()">
+                    <option value="">All</option>
+                    <option value="yes">Only with line items</option>
+                    <option value="no">Only empty items</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-3 flex justify-end">
+                <button type="button" class="btn btn-sm btn-ghost" onclick="clearAdvancedFilters()">Clear Advanced Filters</button>
+              </div>
+            </div>
+          </div>
+
           <!-- PO List Card -->
-          <div class="modern-card animate-fadeIn">
+          <div class="modern-card animate-fadeIn po-list-table-card">
             <div class="card-header">
               <div class="header-icon bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
@@ -122,11 +171,19 @@
                 <div class="header-title">All Purchase Orders</div>
                 <div class="header-subtitle">Click actions to view, download or print</div>
               </div>
-              <div class="ml-auto">
-                <div class="search-bar">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <input type="text" id="poSearchInput" placeholder="Search PO, vendor, event..." class="search-input" oninput="filterPOList(this.value)" />
-                  <kbd class="search-kbd">Ctrl+K</kbd>
+              <div class="ml-auto flex items-center gap-2 po-list-header-actions">
+                <span class="text-xs text-base-content/60 hidden md:inline">Use filters, search, and view toggle for faster scanning.</span>
+                <div class="dropdown dropdown-end po-actions-dropdown relative z-[70]">
+                  <label tabindex="0" class="btn btn-sm btn-outline">Columns</label>
+                  <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box z-[120] mt-1">
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="po_no" checked> PO Number</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="date" checked> Date</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="vendor" checked> Vendor</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="event" checked> Event</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="location" checked> Location</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="amount" checked> Amount</label></li>
+                    <li><label class="justify-start gap-2"><input type="checkbox" data-po-column="actions" checked> Actions</label></li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -173,7 +230,7 @@
     </div>
     <!-- Items Modal -->
     <dialog id="poItemsModal" class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box w-11/12 max-w-4xl p-0 overflow-hidden">
+      <div class="modal-box po-items-modal-box w-full sm:w-11/12 max-w-4xl p-0 overflow-hidden">
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
           <div class="flex items-center gap-3">
@@ -188,7 +245,7 @@
           <button type="button" onclick="document.getElementById('poItemsModal').close()" class="btn btn-sm btn-ghost text-white hover:bg-white/20">✕</button>
         </div>
         <!-- Modal Body -->
-        <div class="p-4 overflow-x-auto" id="poItemsModalBody"></div>
+        <div class="po-items-modal-body p-4" id="poItemsModalBody"></div>
         <!-- Modal Footer -->
         <div class="px-5 py-3 bg-base-200 flex justify-end border-t border-base-300">
           <button type="button" onclick="document.getElementById('poItemsModal').close()" class="btn btn-sm btn-ghost">Close</button>

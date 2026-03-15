@@ -169,8 +169,18 @@ function injectNavbarAuth() {
 
 // Inject sidebar links (Profile for all, User Management + Settings for admin)
 function injectSidebarAuthLinks() {
-    var menus = document.querySelectorAll('.menu');
+    // Cleanup: if older logic injected sidebar links into dropdown menus, remove them.
+    document.querySelectorAll('.dropdown-content .sidebar-profile-link, .dropdown-content .sidebar-users-link, .dropdown-content .sidebar-settings-link').forEach(function(el) {
+        el.remove();
+    });
+
+    // Only target the actual sidebar navigation menu(s), not every .menu in the page.
+    var menus = Array.from(document.querySelectorAll('.modern-sidebar > ul.menu, .drawer-side aside > ul.menu'));
+    if (!menus.length) {
+        menus = Array.from(document.querySelectorAll('.app-sidebar-shell ul.menu.menu-md'));
+    }
     menus.forEach(function(menu) {
+        if (menu.closest('.dropdown-content')) return;
         var path = window.location.pathname;
         var prefix = (path.indexOf('/pages/') !== -1) ? '' : 'pages/';
 
@@ -405,6 +415,23 @@ function loadSealFromSettings(callback) {
 
 // --- Utility: safe element getter ---
 function $(id) { return document.getElementById(id); }
+
+function showEmptyState(containerId, title, description, actionLabel, actionJs, iconSvg) {
+    var el = $(containerId);
+    if (!el) return;
+    var icon = iconSvg || '<svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>';
+    var button = '';
+    if (actionLabel && actionJs) {
+        button = '<button type="button" class="btn btn-sm btn-primary mt-2" onclick="' + actionJs + '">' + escHtml(actionLabel) + '</button>';
+    }
+    el.innerHTML = ''
+        + '<div class="empty-state py-10 px-6 text-center">'
+        + '  <div class="mx-auto mb-3 text-slate-300">' + icon + '</div>'
+        + '  <h3 class="text-base font-semibold text-slate-700">' + escHtml(title || 'No data available') + '</h3>'
+        + '  <p class="text-sm text-slate-500 mt-1 mb-2">' + escHtml(description || 'Try adjusting filters or adding new records.') + '</p>'
+        + button
+        + '</div>';
+}
 
 // --- Toast notification (replaces alert) ---
 function showToast(message, type) {
@@ -1247,11 +1274,11 @@ function renderVendorList(data) {
     var pageData = _pgSlice('vendor', filtered);
 
     var canEditMaster = canManageMasters();
-    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Vendor Name</th><th>Address</th><th>GSTIN</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
+    let html = '<table class="table table-zebra w-full mobile-card-table"><thead><tr><th>#</th><th>Vendor Name</th><th>Address</th><th>GSTIN</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     pageData.forEach((vendor, i) => {
         var displayIdx = startIdx + i;
         var origIdx = allData.indexOf(vendor);
-        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + (vendor.name || '') + '</td><td class="max-w-xs truncate text-slate-600">' + (vendor.address || '-') + '</td><td><code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">' + (vendor.gstin || '-') + '</code></td>' + (canEditMaster ? '<td class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editVendor(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteVendor(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
+        html += '<tr><td data-label="#" class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td data-label="Vendor Name" class="font-semibold text-slate-800">' + (vendor.name || '') + '</td><td data-label="Address" class="max-w-xs truncate text-slate-600">' + (vendor.address || '-') + '</td><td data-label="GSTIN"><code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">' + (vendor.gstin || '-') + '</code></td>' + (canEditMaster ? '<td data-label="Actions" class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editVendor(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteVendor(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
     });
     html += '</tbody></table>';
     if (total > pg.size) html += _buildPaginationBar('vendor', total, renderVendorList);
@@ -1425,11 +1452,11 @@ function renderItemMasterList(data) {
     var pageData = _pgSlice('item', filtered);
 
     var canEditMaster = canManageMasters();
-    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>Description</th><th>UOM</th><th>Rate/Day</th><th>Default Qty</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
+    let html = '<table class="table table-zebra w-full mobile-card-table"><thead><tr><th>#</th><th>Description</th><th>UOM</th><th>Rate/Day</th><th>Default Qty</th>' + (canEditMaster ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     pageData.forEach((item, i) => {
         var displayIdx = startIdx + i;
         var origIdx = allData.indexOf(item);
-        html += '<tr><td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td class="font-semibold text-slate-800">' + item.desc + '</td><td><span class="badge badge-ghost badge-sm">' + item.uom + '</span></td><td class="font-mono text-slate-700">' + item.rate + '</td><td class="text-slate-600">' + (item.default_qty || '') + '</td>' + (canEditMaster ? '<td class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editItemMaster(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteItemMaster(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
+        html += '<tr><td data-label="#" class="font-medium text-slate-500">' + (displayIdx + 1) + '</td><td data-label="Description" class="font-semibold text-slate-800">' + item.desc + '</td><td data-label="UOM"><span class="badge badge-ghost badge-sm">' + item.uom + '</span></td><td data-label="Rate/Day" class="font-mono text-slate-700">' + item.rate + '</td><td data-label="Default Qty" class="text-slate-600">' + (item.default_qty || '') + '</td>' + (canEditMaster ? '<td data-label="Actions" class="flex gap-1"><button class="btn btn-xs btn-warning btn-outline btn-modern" onclick="editItemMaster(' + origIdx + ')">Edit</button><button class="btn btn-xs btn-error btn-outline btn-modern" onclick="deleteItemMaster(' + origIdx + ')">Delete</button></td>' : '') + '</tr>';
     });
     html += '</tbody></table>';
     if (total > pg.size) html += _buildPaginationBar('item', total, renderItemMasterList);
@@ -1571,6 +1598,22 @@ var _poDateFrom = '';
 var _poDateTo = '';
 var _poFilteredList = [];
 var _poQuickRange = '';
+var _poMinAmount = null;
+var _poMaxAmount = null;
+var _poHasItemsFilter = '';
+var _poViewMode = 'table';
+var _poSearchDebounceTimer = null;
+var _poDesktopPreferredView = 'table';
+var _poResponsiveViewBound = false;
+var _poVisibleColumns = {
+    po_no: true,
+    date: true,
+    vendor: true,
+    event: true,
+    location: true,
+    amount: true,
+    actions: true
+};
 
 function _toDateOnly_(value) {
     if (!value) return null;
@@ -1635,6 +1678,20 @@ function _applyPOFilters_(allData) {
             if (toDate && pd > toDate) return false;
         }
 
+        var poTotal = _getPOTotal_(po);
+        if (_poMinAmount !== null && poTotal < _poMinAmount) return false;
+        if (_poMaxAmount !== null && poTotal > _poMaxAmount) return false;
+
+        if (_poHasItemsFilter) {
+            var items = po.items || [];
+            if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch (e) { items = []; }
+            }
+            var hasItems = Array.isArray(items) && items.length > 0;
+            if (_poHasItemsFilter === 'yes' && !hasItems) return false;
+            if (_poHasItemsFilter === 'no' && hasItems) return false;
+        }
+
         return true;
     });
 }
@@ -1663,11 +1720,184 @@ function _populatePOVendorFilter_(allData) {
 }
 
 function _updatePOFilteredSummary_(filtered) {
-    if ($('poFilteredCount')) $('poFilteredCount').textContent = filtered.length;
+    if ($('poFilteredCount')) {
+        var totalAll = (window._poList || []).length;
+        $('poFilteredCount').textContent = filtered.length + ' of ' + totalAll;
+    }
     if ($('poFilteredValue')) {
         var total = filtered.reduce(function(sum, po) { return sum + _getPOTotal_(po); }, 0);
         $('poFilteredValue').textContent = 'Rs ' + total.toLocaleString('en-IN');
     }
+}
+
+function handleGlobalSearch(query) {
+    if (_poSearchDebounceTimer) clearTimeout(_poSearchDebounceTimer);
+    _poSearchDebounceTimer = setTimeout(function() {
+        filterPOList(query);
+    }, 180);
+}
+
+function toggleAdvancedFilters() {
+    var panel = $('advancedFiltersContent');
+    var icon = $('advancedFilterIcon');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    if (icon) {
+        icon.style.transform = panel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+}
+
+function _updateAdvancedFilterCount_() {
+    var count = 0;
+    if (_poMinAmount !== null) count += 1;
+    if (_poMaxAmount !== null) count += 1;
+    if (_poHasItemsFilter) count += 1;
+    if ($('advancedFilterCount')) $('advancedFilterCount').textContent = count + ' active';
+}
+
+function applyAdvancedFilters() {
+    var minV = $('filterMinAmount') ? $('filterMinAmount').value.trim() : '';
+    var maxV = $('filterMaxAmount') ? $('filterMaxAmount').value.trim() : '';
+    _poMinAmount = minV === '' ? null : Math.max(0, Number(minV));
+    _poMaxAmount = maxV === '' ? null : Math.max(0, Number(maxV));
+    _poHasItemsFilter = $('filterHasItems') ? String($('filterHasItems').value || '') : '';
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    _updateAdvancedFilterCount_();
+    renderPOList();
+}
+
+function clearAdvancedFilters() {
+    _poMinAmount = null;
+    _poMaxAmount = null;
+    _poHasItemsFilter = '';
+    if ($('filterMinAmount')) $('filterMinAmount').value = '';
+    if ($('filterMaxAmount')) $('filterMaxAmount').value = '';
+    if ($('filterHasItems')) $('filterHasItems').value = '';
+    _updateAdvancedFilterCount_();
+    _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
+    renderPOList();
+}
+
+function _isPOMobileViewport_() {
+    return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function setTableView(view, opts) {
+    opts = opts || {};
+    _poViewMode = (view === 'cards') ? 'cards' : 'table';
+
+    // Keep desktop user preference so we can restore it after mobile auto-mode.
+    if (!_isPOMobileViewport_() && !opts.auto) {
+        _poDesktopPreferredView = _poViewMode;
+    }
+
+    var tableBtn = $('poTableViewBtn');
+    var cardBtn = $('poCardViewBtn');
+    if (tableBtn) {
+        tableBtn.classList.toggle('active', _poViewMode === 'table');
+        tableBtn.classList.toggle('btn-outline', _poViewMode !== 'table');
+    }
+    if (cardBtn) {
+        cardBtn.classList.toggle('active', _poViewMode === 'cards');
+        cardBtn.classList.toggle('btn-outline', _poViewMode !== 'cards');
+    }
+    var tableWrap = $('poListTableWrap');
+    var cardWrap = $('poCardView');
+    if (tableWrap) tableWrap.classList.toggle('hidden', _poViewMode === 'cards');
+    if (cardWrap) cardWrap.classList.toggle('hidden', _poViewMode !== 'cards');
+}
+
+function _applyAutoPOViewMode_() {
+    // Only run on PO list screen where toggle buttons exist.
+    if (!$('poTableViewBtn') || !$('poCardViewBtn')) return;
+    if (_isPOMobileViewport_()) {
+        setTableView('cards', { auto: true });
+    } else {
+        setTableView(_poDesktopPreferredView || 'table', { auto: true });
+    }
+}
+
+function _bindPOResponsiveViewMode_() {
+    if (_poResponsiveViewBound) return;
+    if (!$('poTableViewBtn') || !$('poCardViewBtn')) return;
+    _poResponsiveViewBound = true;
+
+    var timer = null;
+    window.addEventListener('resize', function() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function() {
+            _applyAutoPOViewMode_();
+        }, 120);
+    });
+}
+
+function togglePOColumn(columnName, isVisible) {
+    if (!_poVisibleColumns.hasOwnProperty(columnName)) return;
+    _poVisibleColumns[columnName] = !!isVisible;
+    applyPOColumnVisibility();
+}
+
+function applyPOColumnVisibility() {
+    var table = $('poTable');
+    Object.keys(_poVisibleColumns).forEach(function(col) {
+        var visible = _poVisibleColumns[col];
+        if (table) {
+            table.querySelectorAll('[data-col="' + col + '"]').forEach(function(cell) {
+                cell.style.display = visible ? '' : 'none';
+            });
+        }
+        var cardWrap = $('poCardView');
+        if (cardWrap) {
+            cardWrap.querySelectorAll('[data-col="' + col + '"]').forEach(function(cell) {
+                cell.style.display = visible ? '' : 'none';
+            });
+        }
+    });
+}
+
+function bindPOColumnControls() {
+    document.querySelectorAll('[data-po-column]').forEach(function(chk) {
+        var col = chk.getAttribute('data-po-column');
+        chk.checked = _poVisibleColumns[col] !== false;
+        chk.onchange = function() {
+            togglePOColumn(col, chk.checked);
+        };
+    });
+}
+
+function _renderPOCardGrid_(pageData, allData, startIdx) {
+    var html = '<div class="po-card-grid">';
+    pageData.forEach(function(po, i) {
+        var idx = allData.indexOf(po);
+        var totalNum = _getPOTotal_(po);
+        var poNo = escHtml(String(po.po_no || '-'));
+        var vendor = escHtml(String(po.vendor_name || '-'));
+        var date = escHtml(String(po.po_date || '-'));
+        var eventName = escHtml(String(po.event_name || '-'));
+        var location = escHtml(String(po.event_location || '-'));
+        html += ''
+            + '<div class="po-mobile-card">'
+            + '  <div class="flex items-start justify-between gap-2">'
+            + '    <div>'
+            + '      <div class="po-card-title" data-col="po_no">' + poNo + '</div>'
+            + '      <div class="po-card-meta" data-col="date">#' + (startIdx + i + 1) + ' • ' + date + '</div>'
+            + '    </div>'
+            + '    <div data-col="amount" class="text-right font-mono text-emerald-600 text-sm font-semibold">₹' + Number(totalNum || 0).toLocaleString('en-IN') + '</div>'
+            + '  </div>'
+            + '  <div data-col="vendor" class="mt-2 text-sm text-slate-700"><span class="font-medium">Vendor:</span> ' + vendor + '</div>'
+            + '  <div data-col="event" class="text-xs text-slate-500 mt-0.5">' + eventName + '</div>'
+            + '  <div data-col="location" class="text-xs text-slate-500 mt-0.5">' + location + '</div>'
+            + '  <div data-col="actions" class="mt-3 flex flex-wrap gap-1.5">'
+            + '    <a href="po-view.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-primary btn-outline">View</a>'
+            + (canManagePO() ? ('<a href="po-edit.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-warning btn-outline">Edit</a>') : '')
+            + '    <button type="button" class="btn btn-xs btn-error btn-outline" onclick="listDownloadPDF(' + idx + ')">PDF</button>'
+            + '    <button type="button" class="btn btn-xs btn-success btn-outline" onclick="listDownloadExcel(' + idx + ')">Excel</button>'
+            + '    <button type="button" class="btn btn-xs btn-neutral btn-outline" onclick="showPOItemsModal(' + idx + ')">Items</button>'
+            + '  </div>'
+            + '</div>';
+    });
+    html += '</div>';
+    return html;
 }
 
 function filterPOList(term) {
@@ -1765,11 +1995,18 @@ function clearPOFilters() {
     _poDateFrom = '';
     _poDateTo = '';
     _poQuickRange = '';
+    _poMinAmount = null;
+    _poMaxAmount = null;
+    _poHasItemsFilter = '';
 
     if ($('poSearchInput')) $('poSearchInput').value = '';
     if ($('poVendorFilter')) $('poVendorFilter').value = '';
     if ($('poDateFrom')) $('poDateFrom').value = '';
     if ($('poDateTo')) $('poDateTo').value = '';
+    if ($('filterMinAmount')) $('filterMinAmount').value = '';
+    if ($('filterMaxAmount')) $('filterMaxAmount').value = '';
+    if ($('filterHasItems')) $('filterHasItems').value = '';
+    _updateAdvancedFilterCount_();
 
     _pagination['po'] = { page: 1, size: (_pagination['po'] || {}).size || 10 };
     renderPOList();
@@ -1792,14 +2029,16 @@ function renderPOList(data) {
     _poFilteredList = filtered.slice();
     _updatePOFilteredSummary_(filtered);
     _applyQuickRangeButtonState_();
+    _updateAdvancedFilterCount_();
+    bindPOColumnControls();
     if (!Array.isArray(allData) || allData.length === 0) {
-        $('poList').innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg><p class="text-sm">No purchase orders found.</p></div>';
+        showEmptyState('poList', 'No purchase orders yet', 'Create your first purchase order to start tracking procurement.', 'Create PO', "window.location.href='add-po.html'");
         return;
     }
     if (filtered.length === 0) {
-        var hasFilter = !!(_poSearchTerm || _poVendorFilter || _poDateFrom || _poDateTo);
-        var emptyMsg = hasFilter ? 'No POs match current filters.' : 'No purchase orders found.';
-        $('poList').innerHTML = '<div class="p-6 text-center text-base-content/50"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg><p class="text-sm">' + emptyMsg + '</p></div>';
+        var hasFilter = !!(_poSearchTerm || _poVendorFilter || _poDateFrom || _poDateTo || _poMinAmount !== null || _poMaxAmount !== null || _poHasItemsFilter);
+        var emptyMsg = hasFilter ? 'No POs match current filters. Try broadening your criteria.' : 'No purchase orders found.';
+        showEmptyState('poList', 'No matching records', emptyMsg, 'Reset Filters', 'clearPOFilters()');
         return;
     }
     // Hero stats
@@ -1824,7 +2063,7 @@ function renderPOList(data) {
         return escHtml(s);
     }
 
-    let html = '<table class="table table-zebra w-full"><thead><tr><th>#</th><th>PO No</th><th>Date</th><th>Vendor</th><th>Event</th><th>Location</th><th>Total</th><th>Actions</th></tr></thead><tbody>';
+    let html = '<div id="poListTableWrap" class="overflow-x-auto"><table id="poTable" class="table table-zebra w-full mobile-card-table"><thead><tr><th>#</th><th data-col="po_no">PO No</th><th data-col="date">Date</th><th data-col="vendor">Vendor</th><th data-col="event">Event</th><th data-col="location">Location</th><th data-col="amount">Total</th><th data-col="actions">Actions</th></tr></thead><tbody id="poTableBody">';
     pageData.forEach((po, i) => {
         var displayIdx = startIdx + i;
         var idx = allData.indexOf(po);
@@ -1835,14 +2074,14 @@ function renderPOList(data) {
         var eventLocation = safeCell(po.event_location, 72);
         var totalNum = _getPOTotal_(po);
         html += '<tr>';
-        html += '<td class="font-medium text-slate-500">' + (displayIdx + 1) + '</td>';
-        html += '<td><span class="font-semibold text-primary" title="' + poNo + '">' + poNo + '</span></td>';
-        html += '<td class="text-slate-600">' + poDate + '</td>';
-        html += '<td class="font-medium" title="' + vendor + '">' + vendor + '</td>';
-        html += '<td class="text-slate-600" title="' + eventName + '">' + eventName + '</td>';
-        html += '<td class="text-slate-500 text-xs" title="' + eventLocation + '">' + eventLocation + '</td>';
-        html += '<td><span class="font-mono font-semibold text-emerald-600">' + (totalNum ? '₹' + Number(totalNum).toLocaleString('en-IN') : '') + '</span></td>';
-        html += '<td>';
+        html += '<td data-label="#" class="font-medium text-slate-500">' + (displayIdx + 1) + '</td>';
+        html += '<td data-label="PO No" data-col="po_no"><span class="font-semibold text-primary" title="' + poNo + '">' + poNo + '</span></td>';
+        html += '<td data-label="Date" data-col="date" class="text-slate-600">' + poDate + '</td>';
+        html += '<td data-label="Vendor" data-col="vendor" class="font-medium" title="' + vendor + '">' + vendor + '</td>';
+        html += '<td data-label="Event" data-col="event" class="text-slate-600" title="' + eventName + '">' + eventName + '</td>';
+        html += '<td data-label="Location" data-col="location" class="text-slate-500 text-xs" title="' + eventLocation + '">' + eventLocation + '</td>';
+        html += '<td data-label="Total" data-col="amount"><span class="font-mono font-semibold text-emerald-600">' + (totalNum ? '₹' + Number(totalNum).toLocaleString('en-IN') : '') + '</span></td>';
+        html += '<td data-label="Actions" data-col="actions">';
         html += '<div class="flex flex-wrap gap-1">';
         html += '<a href="po-view.html?id=' + encodeURIComponent(String(po.po_no || '').trim()) + '" class="btn btn-xs btn-primary btn-outline btn-modern" title="View"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>';
         if (canManagePO()) {
@@ -1856,9 +2095,13 @@ function renderPOList(data) {
         html += '</td>';
         html += '</tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
+    html += '<div id="poCardView" class="hidden">' + _renderPOCardGrid_(pageData, allData, startIdx) + '</div>';
     if (total > pg.size) html += _buildPaginationBar('po', total, renderPOList);
     $('poList').innerHTML = html;
+    applyPOColumnVisibility();
+    _bindPOResponsiveViewMode_();
+    _applyAutoPOViewMode_();
 }
 
 function triggerPOBulkUpload() {
@@ -1975,53 +2218,84 @@ function showPOItemsModal(idx) {
 
     // Build items table
     var html = '';
+    var isMobile = _isPOMobileViewport_();
     if (!items.length && !transport) {
         html = '<div class="py-10 text-center text-base-content/40 text-sm">No line items recorded for this PO.</div>';
     } else {
-        html += '<table class="table table-sm table-zebra w-full text-sm">';
-        html += '<thead><tr class="bg-base-200">';
-        html += '<th class="text-center w-10">#</th>';
-        html += '<th>Item Description</th>';
-        html += '<th class="text-right w-14">Qty</th>';
-        html += '<th class="text-center w-16">UOM</th>';
-        html += '<th class="text-right w-24">Rate/Day</th>';
-        html += '<th class="text-right w-16">Days</th>';
-        html += '<th class="text-right w-28">Total (INR)</th>';
-        html += '</tr></thead><tbody>';
+        if (isMobile) {
+            html += '<div class="po-items-mobile-grid">';
+            items.forEach(function(item, i) {
+                var total = parseFloat(item.total) || 0;
+                html += '<div class="po-items-mobile-row">';
+                html += '<div class="flex items-start justify-between gap-2">';
+                html += '<div class="font-semibold text-sm text-slate-800">#' + (i + 1) + ' ' + escHtml(item.desc || '—') + '</div>';
+                html += '<div class="font-mono text-sm font-bold text-emerald-600">' + (total ? '₹' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—') + '</div>';
+                html += '</div>';
+                html += '<div class="grid grid-cols-3 gap-2 mt-2">';
+                html += '<div><div class="po-items-mobile-label">Qty</div><div class="font-mono text-sm">' + (item.qty || '') + '</div></div>';
+                html += '<div><div class="po-items-mobile-label">UOM</div><div class="text-sm">' + escHtml(item.uom || 'NOS') + '</div></div>';
+                html += '<div><div class="po-items-mobile-label">Days</div><div class="font-mono text-sm">' + (item.days || '') + '</div></div>';
+                html += '</div>';
+                html += '<div class="mt-2"><span class="po-items-mobile-label">Rate/Day: </span><span class="font-mono text-sm">' + (item.per_day ? Number(item.per_day).toLocaleString('en-IN') : '—') + '</span></div>';
+                html += '</div>';
+            });
+            if (transport > 0) {
+                html += '<div class="po-items-mobile-row">';
+                html += '<div class="flex items-center justify-between text-sm italic text-base-content/70">';
+                html += '<span>Transport Charges</span>';
+                html += '<span class="font-mono">₹' + transport.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</span>';
+                html += '</div></div>';
+            }
+            html += '<div class="po-items-mobile-row bg-base-200/70">';
+            html += '<div class="flex items-center justify-between text-sm font-semibold">';
+            html += '<span>Total Qty: <span class="font-mono">' + totalQty + '</span></span>';
+            html += '<span>Subtotal: <span class="font-mono">₹' + subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</span></span>';
+            html += '</div></div>';
+            html += '</div>';
+        } else {
+            html += '<table class="table table-sm table-zebra w-full text-sm">';
+            html += '<thead><tr class="bg-base-200">';
+            html += '<th class="text-center w-10">#</th>';
+            html += '<th>Item Description</th>';
+            html += '<th class="text-right w-14">Qty</th>';
+            html += '<th class="text-center w-16">UOM</th>';
+            html += '<th class="text-right w-24">Rate/Day</th>';
+            html += '<th class="text-right w-16">Days</th>';
+            html += '<th class="text-right w-28">Total (INR)</th>';
+            html += '</tr></thead><tbody>';
 
-        items.forEach(function(item, i) {
-            var total = parseFloat(item.total) || 0;
-            html += '<tr>';
-            html += '<td class="text-center text-base-content/50 font-mono text-xs">' + (i + 1) + '</td>';
-            html += '<td class="font-medium">' + escHtml(item.desc || '—') + '</td>';
-            html += '<td class="text-right font-mono">' + (item.qty || '') + '</td>';
-            html += '<td class="text-center">';
-            html += '<span class="badge badge-ghost badge-sm">' + escHtml(item.uom || 'NOS') + '</span>';
-            html += '</td>';
-            html += '<td class="text-right font-mono">' + (item.per_day ? Number(item.per_day).toLocaleString('en-IN') : '—') + '</td>';
-            html += '<td class="text-right font-mono">' + (item.days || '') + '</td>';
-            html += '<td class="text-right font-semibold font-mono">' + (total ? '\u20b9' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—') + '</td>';
-            html += '</tr>';
-        });
+            items.forEach(function(item, i) {
+                var total = parseFloat(item.total) || 0;
+                html += '<tr>';
+                html += '<td class="text-center text-base-content/50 font-mono text-xs">' + (i + 1) + '</td>';
+                html += '<td class="font-medium">' + escHtml(item.desc || '—') + '</td>';
+                html += '<td class="text-right font-mono">' + (item.qty || '') + '</td>';
+                html += '<td class="text-center">';
+                html += '<span class="badge badge-ghost badge-sm">' + escHtml(item.uom || 'NOS') + '</span>';
+                html += '</td>';
+                html += '<td class="text-right font-mono">' + (item.per_day ? Number(item.per_day).toLocaleString('en-IN') : '—') + '</td>';
+                html += '<td class="text-right font-mono">' + (item.days || '') + '</td>';
+                html += '<td class="text-right font-semibold font-mono">' + (total ? '\u20b9' + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—') + '</td>';
+                html += '</tr>';
+            });
 
-        // Transport row
-        if (transport > 0) {
-            html += '<tr class="italic text-base-content/60">';
-            html += '<td class="text-center">+</td>';
-            html += '<td colspan="5">Transport Charges</td>';
-            html += '<td class="text-right font-mono">₹' + transport.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</td>';
+            if (transport > 0) {
+                html += '<tr class="italic text-base-content/60">';
+                html += '<td class="text-center">+</td>';
+                html += '<td colspan="5">Transport Charges</td>';
+                html += '<td class="text-right font-mono">₹' + transport.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</td>';
+                html += '</tr>';
+            }
+
+            html += '<tr class="font-bold bg-base-200">';
+            html += '<td></td>';
+            html += '<td>Total</td>';
+            html += '<td class="text-right font-mono">' + totalQty + '</td>';
+            html += '<td colspan="3"></td>';
+            html += '<td class="text-right font-mono">₹' + subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</td>';
             html += '</tr>';
+            html += '</tbody></table>';
         }
-
-        // Footer subtotal row
-        html += '<tr class="font-bold bg-base-200">';
-        html += '<td></td>';
-        html += '<td>Total</td>';
-        html += '<td class="text-right font-mono">' + totalQty + '</td>';
-        html += '<td colspan="3"></td>';
-        html += '<td class="text-right font-mono">₹' + subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }) + '</td>';
-        html += '</tr>';
-        html += '</tbody></table>';
 
         // Tax + Grand Total summary strip
         html += '<div class="mt-3 flex flex-col items-end gap-1 pr-1 pb-1">';
