@@ -272,14 +272,14 @@
         h += '<input type="hidden" name="po_id" value="' + escHtml(po.po_id || po.po_no || '') + '">';
 
         // ── SECTION 1: PO Details ──
-        h += '<div class="section-badge"><span class="badge-num">1</span> PO Details</div>';
+        h += '<div class="section-badge"><span class="badge-num">1</span> <span class="section-icon">📄</span> PO Details</div>';
         h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">PO Number</span></label><input type="text" name="po_no" id="edit_po_no" class="input input-bordered w-full" value="' + escHtml(po.po_no || '') + '" required></div>';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">PO Date</span></label><input type="date" name="po_date" id="edit_po_date" class="input input-bordered w-full" value="' + escHtml(po.po_date || '') + '" required></div>';
         h += '</div>';
 
         // ── SECTION 2: Vendor Details ──
-        h += '<div class="section-badge"><span class="badge-num">2</span> Vendor Details</div>';
+        h += '<div class="section-badge"><span class="badge-num">2</span> <span class="section-icon">🏢</span> Vendor Details</div>';
         h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">Vendor Name</span></label>';
         h += '<div class="vendor-input-row"><div class="vendor-dropdown-wrap" id="vendorDropdownWrap"><input type="text" name="vendor_name" id="vendor_name" class="input input-bordered w-full vendor-dd-input" autocomplete="off" placeholder="Search or type vendor..." value="' + escHtml(po.vendor_name || '') + '" required><div class="vendor-dd-list" id="vendorDDList"></div></div>';
@@ -289,7 +289,7 @@
         h += '</div>';
 
         // ── SECTION 3: Event & Client ──
-        h += '<div class="section-badge"><span class="badge-num">3</span> Event &amp; Client</div>';
+        h += '<div class="section-badge"><span class="badge-num">3</span> <span class="section-icon">🎪</span> Event &amp; Client</div>';
         h += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">Client Name</span></label><input type="text" name="client_name" id="edit_client_name" class="input input-bordered w-full" value="' + escHtml(po.client_name || '') + '" placeholder="M/s. ..."></div>';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">Event Name</span></label><input type="text" name="event_name" id="edit_event_name" class="input input-bordered w-full" value="' + escHtml(po.event_name || '') + '"></div>';
@@ -298,14 +298,14 @@
         h += '</div>';
 
         // ── SECTION 4: Line Items ──
-        h += '<div class="section-badge"><span class="badge-num">4</span> Line Items</div>';
+        h += '<div class="section-badge"><span class="badge-num">4</span> <span class="section-icon">📦</span> Line Items</div>';
 
         // Inline items table (master select + custom input per row, Add Row in table footer)
         h += '<div class="text-xs text-base-content/50 mb-1"><span class="font-semibold text-primary">Tip:</span> Check the box to pick from Item Master, uncheck for custom entry</div>';
         h += '<div id="editItemsTable" class="rounded-lg border border-base-300 mb-4"></div>';
 
         // ── SECTION 5: Charges & Terms ──
-        h += '<div class="section-badge"><span class="badge-num">5</span> Charges &amp; Terms</div>';
+        h += '<div class="section-badge"><span class="badge-num">5</span> <span class="section-icon">💰</span> Charges &amp; Terms</div>';
         h += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">Transport Charges</span></label><input type="number" name="transport" id="editTransport" class="input input-bordered w-full" value="' + (po.transport || 0) + '" min="0" oninput="renderEditItemsTable()"></div>';
         h += '<div class="form-control"><label class="label"><span class="label-text font-medium">CGST %</span></label><input type="number" name="cgst_percent" id="edit_cgst_percent" class="input input-bordered w-full" value="' + (po.cgst_percent || 0) + '" min="0" max="100" step="0.01" oninput="renderEditItemsTable()"></div>';

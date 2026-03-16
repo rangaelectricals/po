@@ -3261,6 +3261,10 @@ function poCalcRow(idx) {
         totalAmt.textContent = rowTotal > 0
             ? '\u20b9' + rowTotal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
             : '\u2014';
+        // Flash the cell to give feedback that the calc updated
+        totalAmt.classList.remove('calc-flash');
+        void totalAmt.offsetWidth;
+        totalAmt.classList.add('calc-flash');
     }
 
     // Update or create the calc-preview beneath the total
@@ -3575,7 +3579,12 @@ function updatePOTotal() {
     if (inItems) inItems.textContent = '\u20b9' + itemsTotal.toLocaleString('en-IN');
     if (inCgst)  inCgst.textContent  = '+\u20b9' + cgstAmt.toLocaleString('en-IN') + ' (' + cgstPct + '%)';
     if (inSgst)  inSgst.textContent  = '+\u20b9' + sgstAmt.toLocaleString('en-IN') + ' (' + sgstPct + '%)';
-    if (inGrand) inGrand.textContent = '\u20b9' + grandTotal.toLocaleString('en-IN');
+    if (inGrand) {
+        inGrand.textContent = '\u20b9' + grandTotal.toLocaleString('en-IN');
+        inGrand.classList.remove('calc-flash');
+        void inGrand.offsetWidth;
+        inGrand.classList.add('calc-flash');
+    }
     if (inCgstW) inCgstW.style.display = cgstPct ? '' : 'none';
     if (inSgstW) inSgstW.style.display = sgstPct ? '' : 'none';
 }

@@ -3806,7 +3806,7 @@ body.po-preview-open {
     .po-form-page .po-form-summary-actions {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.5rem;
     }
 
@@ -3994,5 +3994,37 @@ body.po-preview-open {
         padding: 0.9rem !important;
         text-align: center;
     }
+}
+
+/* ============================================================ */
+/* Section Badge Icons                                           */
+/* ============================================================ */
+.section-badge .section-icon {
+    font-size: 0.9rem;
+    line-height: 1;
+    margin-right: 0.1rem;
+}
+
+/* ============================================================ */
+/* Sticky Form Summary Panel                                     */
+/* ============================================================ */
+.po-form-summary {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    border-radius: 12px 12px 0 0 !important;
+    box-shadow: 0 -6px 24px -4px rgba(0, 0, 0, 0.10);
+    overflow: visible !important;
+}
+
+/* ============================================================ */
+/* Calc Flash Animation                                          */
+/* ============================================================ */
+@keyframes calcFlash {
+    0%,  100% { background: transparent; }
+    35%        { background: rgba(99, 102, 241, 0.18); border-radius: 4px; }
+}
+.calc-flash {
+    animation: calcFlash 0.45s ease;
 }
 

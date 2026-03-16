@@ -42,7 +42,7 @@
               <form id="poForm">
                 <input type="hidden" name="po_id" id="po_id">
                 <!-- SECTION 1: PO Details -->
-                <div class="section-badge"><span class="badge-num">1</span> PO Details</div>
+                <div class="section-badge"><span class="badge-num">1</span> <span class="section-icon">📄</span> PO Details</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div class="form-control">
                     <label class="label"><span class="label-text font-medium">PO Number</span></label>
@@ -60,7 +60,7 @@
                   </div>
                 </div>
                 <!-- SECTION 2: Vendor Details -->
-                <div class="section-badge"><span class="badge-num">2</span> Vendor Details</div>
+                <div class="section-badge"><span class="badge-num">2</span> <span class="section-icon">🏢</span> Vendor Details</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div class="form-control">
                     <label class="label"><span class="label-text font-medium">Vendor Name</span></label>
@@ -88,7 +88,7 @@
                   </div>
                 </div>
                 <!-- SECTION 3: Event & Client -->
-                <div class="section-badge"><span class="badge-num">3</span> Event &amp; Client</div>
+                <div class="section-badge"><span class="badge-num">3</span> <span class="section-icon">🎪</span> Event &amp; Client</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div class="form-control">
                     <label class="label"><span class="label-text font-medium">Event Name</span></label>
@@ -105,7 +105,7 @@
                 </div>
 
                 <!-- SECTION 4: Line Items -->
-                <div class="section-badge"><span class="badge-num">4</span> Line Items</div>
+                <div class="section-badge"><span class="badge-num">4</span> <span class="section-icon">📦</span> Line Items</div>
 
                 <!-- Items Table -->
                 <div class="po-items-tip">
@@ -116,7 +116,7 @@
                 <input type="hidden" name="items" id="items">
 
                 <!-- SECTION 5: Charges & Terms -->
-                <div class="section-badge"><span class="badge-num">5</span> Charges &amp; Terms</div>
+                <div class="section-badge"><span class="badge-num">5</span> <span class="section-icon">💰</span> Charges &amp; Terms</div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div class="form-control">
                     <label class="label"><span class="label-text font-medium">Transport Charges</span></label>
@@ -154,10 +154,14 @@
                       <div class="text-3xl font-black text-primary font-mono tracking-tight">&#8377;<span id="poGrandTotal">0</span></div>
                     </div>
                     <div class="flex gap-2 po-form-summary-actions">
-                      <button type="reset" class="btn btn-ghost btn-sm">Reset</button>
+                      <button type="reset" class="btn btn-ghost btn-sm gap-1">↺ Reset</button>
+                      <button type="button" class="btn btn-outline btn-sm gap-1 po-draft-btn" onclick="saveDraftPO()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                        Save Draft
+                      </button>
                       <button type="submit" class="btn btn-primary gap-1.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                        Save PO
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Save &amp; PDF
                       </button>
                     </div>
                   </div>
@@ -228,6 +232,48 @@
     </div>
     <script src="../main.js"></script>
     <script>
+      // Save as Draft (status = 'Draft', no PDF download)
+      function saveDraftPO() {
+        var form = document.getElementById('poForm');
+        if (!form) return;
+        if (!poItems.length) { showToast('Add at least one item!', 'warning'); return; }
+        var formData = new FormData(form);
+        var data = {};
+        formData.forEach(function(v, k) { data[k] = v; });
+        data.items = poItems;
+        data.status = 'Draft';
+        var btn = document.querySelector('.po-draft-btn');
+        setBtnLoading(btn, true);
+        gsPost(Object.assign({ action: 'create' }, data))
+          .then(function(resp) {
+            setBtnLoading(btn, false);
+            if (resp.success) {
+              showToast('Draft saved!', 'success');
+            } else {
+              showToast('Save failed: ' + (resp.error || 'Unknown error'), 'error');
+            }
+          })
+          .catch(function(err) { setBtnLoading(btn, false); showToast('Error: ' + err.message, 'error'); });
+      }
+
+      // Download current form data as PDF (called after successful save)
+      function _downloadPOAsPDF(data, items) {
+        if (!window.jspdf || typeof buildPODocument !== 'function') return;
+        var doc = buildPODocument({
+          po_no: data.po_no || '', po_date: data.po_date || '',
+          vendor_name: data.vendor_name || '', vendor_address: data.vendor_address || '',
+          vendor_gstin: data.vendor_gstin || '', client_name: data.client_name || '',
+          event_name: data.event_name || '', event_location: data.event_location || '',
+          event_date: data.event_date || '',
+          transport: parseFloat(data.transport) || 0,
+          cgst_percent: parseFloat(data.cgst_percent) || 0,
+          sgst_percent: parseFloat(data.sgst_percent) || 0,
+          terms: data.terms || '', items: items || [],
+          includeSign: document.getElementById('includeSignToggle') ? document.getElementById('includeSignToggle').checked : false
+        });
+        if (doc) doc.save((data.po_no || 'PO') + '.pdf');
+      }
+
       // Toggle preview on mobile
       function togglePreviewPanel() {
         const panel = document.getElementById('previewPanel');
@@ -283,6 +329,40 @@
           return;
         }
         initPOForm();
+
+        // Wrap form.onsubmit to auto-download PDF on successful save
+        var form = document.getElementById('poForm');
+        if (form && form.onsubmit) {
+          var _baseSave = form.onsubmit;
+          form.onsubmit = function(e) {
+            e.preventDefault();
+            if (!poItems.length) { showToast('Add at least one item to the PO!', 'warning'); return; }
+            var formData = new FormData(form);
+            var data = {};
+            formData.forEach(function(v, k) { data[k] = v; });
+            data.items = poItems;
+            var savedItems = poItems.slice();
+            var saveBtn = form.querySelector('button[type="submit"]');
+            setBtnLoading(saveBtn, true);
+            var dateField = document.getElementById('po_date');
+            gsPost(Object.assign({ action: 'create' }, data))
+              .then(function(resp) {
+                setBtnLoading(saveBtn, false);
+                if (resp.success) {
+                  invalidateCache('read'); invalidateCache('read_all');
+                  showToast('PO saved successfully!', 'success');
+                  _downloadPOAsPDF(data, savedItems);
+                  form.reset(); poItems = []; renderPOItemsTable();
+                  if (dateField) dateField.value = new Date().toISOString().split('T')[0];
+                  generateNextPONumber();
+                  setTimeout(function() {
+                    if (confirm('View the new PO?')) window.location.href = 'po-view.html?id=' + encodeURIComponent(data.po_no);
+                  }, 600);
+                } else { showToast('Failed: ' + (resp.error || 'Unknown error'), 'error'); }
+              })
+              .catch(function(err) { setBtnLoading(saveBtn, false); showToast('Error: ' + err.message, 'error'); });
+          };
+        }
 
         // Attach live preview listeners to all form fields
         const formEl = document.getElementById('poForm');
