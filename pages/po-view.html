@@ -387,7 +387,10 @@
 
         y = Math.max(y, sigLineY + 8);
 
-        doc.save('PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.pdf');
+        var fileBase = (typeof getPOExportFileBaseName === 'function')
+          ? getPOExportFileBaseName(po)
+          : (po.po_no || 'RE-EO-001');
+        doc.save(fileBase + '.pdf');
       }
 
       // ---- Excel Download ----

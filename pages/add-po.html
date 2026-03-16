@@ -36,7 +36,7 @@
           </div>
           <div class="flex flex-col lg:flex-row gap-4 items-start">
             <!-- LEFT: Form -->
-            <div class="w-full lg:w-1/2 xl:min-w-[420px] flex-shrink-0">
+            <div class="w-full lg:w-3/5 xl:min-w-[420px] flex-shrink-0">
           <div class="card bg-base-100 shadow border border-base-300 compact-form">
             <div class="card-body">
               <form id="poForm">
@@ -171,7 +171,7 @@
           </div>
             </div>
             <!-- RIGHT: Live PDF Preview -->
-            <div id="previewPanel" class="w-full lg:w-1/2 lg:sticky lg:top-4 hidden lg:block po-preview-panel">
+            <div id="previewPanel" class="w-full lg:w-2/5 lg:sticky lg:top-4 hidden lg:block po-preview-panel">
               <div class="card bg-base-100 shadow border border-base-300">
                 <div class="card-body p-3">
                   <div class="flex items-center justify-between mb-2">
@@ -271,7 +271,12 @@
           terms: data.terms || '', items: items || [],
           includeSign: document.getElementById('includeSignToggle') ? document.getElementById('includeSignToggle').checked : false
         });
-        if (doc) doc.save((data.po_no || 'PO') + '.pdf');
+        if (doc) {
+          var fileBase = (typeof getPOExportFileBaseName === 'function')
+            ? getPOExportFileBaseName(data)
+            : (data.po_no || 'RE-EO-001');
+          doc.save(fileBase + '.pdf');
+        }
       }
 
       // Toggle preview on mobile

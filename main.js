@@ -1854,6 +1854,31 @@ function _applyPOFilters_(allData) {
     });
 }
 
+function _extractPOSequence_(poNo) {
+    var text = String(poNo || '').trim();
+    var m = text.match(/\/(\d+)$/);
+    if (!m) return 0;
+    var n = parseInt(m[1], 10);
+    return isNaN(n) ? 0 : n;
+}
+
+// Keep PO list newest-first: latest date first, then higher PO sequence.
+function _sortPOListLatestFirst_(list) {
+    return (Array.isArray(list) ? list.slice() : []).sort(function(a, b) {
+        var da = _toDateOnly_(a && a.po_date);
+        var db = _toDateOnly_(b && b.po_date);
+        var ta = da ? da.getTime() : 0;
+        var tb = db ? db.getTime() : 0;
+        if (tb !== ta) return tb - ta;
+
+        var sa = _extractPOSequence_(a && a.po_no);
+        var sb = _extractPOSequence_(b && b.po_no);
+        if (sb !== sa) return sb - sa;
+
+        return String((b && b.po_no) || '').localeCompare(String((a && a.po_no) || ''));
+    });
+}
+
 function _populatePOVendorFilter_(allData) {
     var sel = $('poVendorFilter');
     if (!sel) return;
@@ -2183,7 +2208,7 @@ function renderPOList(data) {
     if (data) window._poList = data;
     var allData = window._poList || [];
     _populatePOVendorFilter_(allData);
-    var filtered = _applyPOFilters_(allData);
+    var filtered = _sortPOListLatestFirst_(_applyPOFilters_(allData));
     _poFilteredList = filtered.slice();
     _updatePOFilteredSummary_(filtered);
     _applyQuickRangeButtonState_();
@@ -2518,6 +2543,32 @@ function _preparePO(idx) {
     return po;
 }
 
+function _sanitizeFileNamePart_(value) {
+    var text = String(value || '')
+        .replace(/[\\/:*?"<>|]+/g, ' - ')
+        .replace(/[\r\n\t]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*-\s*/g, '-')
+        .trim();
+    return text;
+}
+
+function _stripBusinessPrefix_(value) {
+    var text = _sanitizeFileNamePart_(value);
+    return text.replace(/^m\s*\/?\s*s\.?\s*/i, '').replace(/^ms\.?\s*/i, '').trim();
+}
+
+// Builds export names in this pattern:
+// RE-EO-001-VENDOR NAME-(CLIENT NAME - LOCATION)
+function getPOExportFileBaseName(po) {
+    var poNo = _sanitizeFileNamePart_(po && po.po_no) || 'RE-EO-001';
+    var vendorName = _stripBusinessPrefix_(po && po.vendor_name) || 'VENDOR NAME';
+    var clientName = _stripBusinessPrefix_(po && po.client_name) || 'CLIENT NAME';
+    var locationName = _sanitizeFileNamePart_(po && (po.event_location || po.location));
+    var clientLocation = locationName ? (clientName + ' - ' + locationName) : clientName;
+    return poNo + '-' + vendorName + '-(' + clientLocation + ')';
+}
+
 // Download PDF for a PO from the list page
 function listDownloadPDF(idx) {
     var po = _preparePO(idx);
@@ -2530,7 +2581,7 @@ function listDownloadPDF(idx) {
         terms: po.terms, items: po._items,
         includeSign: true
     });
-    if (doc) doc.save('PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.pdf');
+    if (doc) doc.save(getPOExportFileBaseName(po) + '.pdf');
 }
 
 // Download Excel for a PO from the list page
@@ -2797,7 +2848,7 @@ async function _downloadPOExcelStyled_(po, fileName) {
 
 async function downloadPOExcelFromObject(po) {
     if (!po) return;
-    var fileName = 'PO_' + (po.po_no || 'unknown').replace(/[\/\\]/g, '_') + '.xlsx';
+    var fileName = getPOExportFileBaseName(po) + '.xlsx';
     var styledOk = await _downloadPOExcelStyled_(po, fileName);
     if (styledOk) return;
 
@@ -3615,6 +3666,16 @@ function generateNextPONumber() {
         if (resp && resp.success && resp.po_no) {
             poNoField.value = resp.po_no;
             poNoField.placeholder = 'Auto-generated';
+            // Keep a local hint so offline/fallback mode does not regress sequence.
+            try {
+                var seqNum = parseInt(resp.seq, 10);
+                if (isNaN(seqNum)) {
+                    var m = String(resp.po_no).match(/\/(\d+)$/);
+                    seqNum = m ? parseInt(m[1], 10) : 0;
+                }
+                var pfx = (window._appSettings && window._appSettings.po_prefix) ? String(window._appSettings.po_prefix).trim() : 'RE';
+                localStorage.setItem('po_next_seq_' + pfx + '/EO/', String(seqNum || 0));
+            } catch (e) {}
             if (statusEl) statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
         } else {
             // Fallback: generate client-side
@@ -3627,10 +3688,29 @@ function generateNextPONumber() {
 }
 
 function _fallbackPONumber(poNoField, statusEl) {
-    // Client-side fallback: PREFIX/EO/001 (no sequence awareness)
-    var pfx = (window._appSettings && window._appSettings.po_prefix) ? window._appSettings.po_prefix : 'RE';
-    var startSeq = (window._appSettings && window._appSettings.po_start_seq) ? String(parseInt(window._appSettings.po_start_seq) || 1).padStart(3, '0') : '001';
-    poNoField.value = pfx + '/EO/' + startSeq;
+    // Client-side fallback with best-effort sequence awareness.
+    var pfx = (window._appSettings && window._appSettings.po_prefix) ? String(window._appSettings.po_prefix).trim() : 'RE';
+    var prefix = pfx + '/EO/';
+    var startSeqNum = (window._appSettings && window._appSettings.po_start_seq)
+        ? (parseInt(window._appSettings.po_start_seq, 10) || 1)
+        : 1;
+
+    var maxSeq = 0;
+    var list = Array.isArray(window._poList) ? window._poList : [];
+    list.forEach(function(po) {
+        var poNo = String((po && po.po_no) || '').trim();
+        if (poNo.indexOf(prefix) !== 0) return;
+        var seq = parseInt(poNo.substring(prefix.length), 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+    });
+
+    var hintedSeq = 0;
+    try {
+        hintedSeq = parseInt(localStorage.getItem('po_next_seq_' + prefix), 10) || 0;
+    } catch (e) {}
+
+    var nextNum = Math.max(startSeqNum, maxSeq + 1, hintedSeq);
+    poNoField.value = prefix + String(nextNum).padStart(3, '0');
     poNoField.placeholder = 'Auto-generated';
     if (statusEl) statusEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Offline fallback — verify sequence"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
 }
