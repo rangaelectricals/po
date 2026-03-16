@@ -236,6 +236,11 @@ function logout() {
 
 var SIDEBAR_COLLAPSE_KEY = 'po_sidebar_collapsed_desktop';
 
+function _isCompactSidebarPage_() {
+    var path = String((window.location && window.location.pathname) || '').toLowerCase();
+    return path.indexOf('/pages/add-po.html') !== -1 || path.indexOf('/pages/po-edit.html') !== -1;
+}
+
 function _isMobileViewport_() {
     return window.matchMedia('(max-width: 767px)').matches;
 }
@@ -245,7 +250,13 @@ function _isTabletViewport_() {
 }
 
 function _isSidebarCollapsedDesktop_() {
-    return localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+    // Force compact sidebar on Create/Edit PO pages for better form workspace.
+    if (_isCompactSidebarPage_()) return true;
+
+    var stored = localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
+    // Default to expanded sidebar across the app when no preference exists.
+    if (stored === null) return false;
+    return stored === '1';
 }
 
 function _setSidebarCollapsedDesktop_(collapsed) {

@@ -58,48 +58,52 @@
 
           <!-- Stats Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600">
+            <div class="stat-card bg-gradient-to-br from-blue-600 to-blue-700">
               <div class="stat-card-blob"></div>
               <div class="flex items-center justify-between relative">
                 <div>
-                  <div class="stat-card-label">Total POs</div>
+                  <div class="stat-card-label"><span class="label-icon" aria-hidden="true">📄</span> Total POs</div>
                   <div class="stat-card-value" id="statPOs">--</div>
+                  <div class="stat-card-trend" id="statPOsTrend">--</div>
                 </div>
                 <div class="stat-card-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                 </div>
               </div>
             </div>
-            <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600">
+            <div class="stat-card bg-gradient-to-br from-indigo-600 to-indigo-700">
               <div class="stat-card-blob"></div>
               <div class="flex items-center justify-between relative">
                 <div>
-                  <div class="stat-card-label">Vendors</div>
+                  <div class="stat-card-label"><span class="label-icon" aria-hidden="true">👤</span> Vendors</div>
                   <div class="stat-card-value" id="statVendors">--</div>
+                  <div class="stat-card-trend" id="statVendorsTrend">--</div>
                 </div>
                 <div class="stat-card-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </div>
               </div>
             </div>
-            <div class="stat-card bg-gradient-to-br from-emerald-500 to-emerald-600">
+            <div class="stat-card bg-gradient-to-br from-teal-600 to-teal-700">
               <div class="stat-card-blob"></div>
               <div class="flex items-center justify-between relative">
                 <div>
-                  <div class="stat-card-label">Items</div>
+                  <div class="stat-card-label"><span class="label-icon" aria-hidden="true">📦</span> Items</div>
                   <div class="stat-card-value" id="statItems">--</div>
+                  <div class="stat-card-trend" id="statItemsTrend">--</div>
                 </div>
                 <div class="stat-card-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 </div>
               </div>
             </div>
-            <div class="stat-card bg-gradient-to-br from-orange-500 to-rose-500 crud-action">
+            <div class="stat-card bg-gradient-to-br from-amber-500 to-orange-600 crud-action">
               <div class="stat-card-blob"></div>
               <div class="flex items-center justify-between relative">
                 <div>
-                  <div class="stat-card-label">Total PO Value</div>
+                  <div class="stat-card-label"><span class="label-icon" aria-hidden="true">⚡</span> Total PO Value</div>
                   <div class="stat-card-value" id="statPOValue">--</div>
+                  <div class="stat-card-trend" id="statPOValueTrend">--</div>
                 </div>
                 <div class="stat-card-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -174,7 +178,7 @@
                 </div>
                 <div>
                   <div class="header-title">Monthly Spend Trend</div>
-                  <div class="header-subtitle">Last 6 months</div>
+                  <div class="header-subtitle" id="dashboardTrendSubtitle">Last 6 months with data</div>
                 </div>
               </div>
               <div class="card-content">
@@ -357,6 +361,25 @@
         var now = new Date();
         var curMonth = now.getMonth();
         var curYear = now.getFullYear();
+        var prevMonthDate = new Date(curYear, curMonth - 1, 1);
+        var prevMonth = prevMonthDate.getMonth();
+        var prevYear = prevMonthDate.getFullYear();
+
+        var prevMonthPOs = 0;
+        var prevMonthAmount = 0;
+        var currentMonthVendorSet = {};
+        var prevMonthVendorSet = {};
+        var currentMonthItemSet = {};
+        var prevMonthItemSet = {};
+        var monthMap = {};
+        var categoryMap = {};
+
+        var itemCategoryLookup = {};
+        items.forEach(function(item) {
+          var key = String(item.name || item.item_name || item.item || '').trim().toLowerCase();
+          if (!key) return;
+          itemCategoryLookup[key] = String(item.category || item.type || item.group || 'Uncategorized').trim() || 'Uncategorized';
+        });
 
         var months = [];
         for (var i = 5; i >= 0; i--) {
@@ -376,6 +399,23 @@
               monthAmount += amount;
             }
 
+            if (d.getMonth() === prevMonth && d.getFullYear() === prevYear) {
+              prevMonthPOs += 1;
+              prevMonthAmount += amount;
+            }
+
+            var monthKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            if (!monthMap[monthKey]) {
+              monthMap[monthKey] = {
+                key: monthKey,
+                label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+                amount: 0,
+                count: 0
+              };
+            }
+            monthMap[monthKey].amount += amount;
+            monthMap[monthKey].count += 1;
+
             var mk = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
             for (var k = 0; k < months.length; k++) {
               if (months[k].key === mk) {
@@ -391,16 +431,64 @@
           vendorMap[vn].count += 1;
           vendorMap[vn].value += amount;
 
+          var poDate = parseDateSafe(po.po_date);
+          if (poDate) {
+            if (poDate.getMonth() === curMonth && poDate.getFullYear() === curYear) {
+              currentMonthVendorSet[vn] = 1;
+            }
+            if (poDate.getMonth() === prevMonth && poDate.getFullYear() === prevYear) {
+              prevMonthVendorSet[vn] = 1;
+            }
+          }
+
           var lineItems = safeItems(po);
           lineItemsCount += lineItems.length;
+          var splitAmount = lineItems.length ? (amount / lineItems.length) : amount;
           lineItems.forEach(function(it) {
             var nm = String(it.desc || it.item_desc || 'Unnamed Item').trim() || 'Unnamed Item';
             var qty = Number(it.qty || 0);
             if (!itemMap[nm]) itemMap[nm] = { name: nm, qty: 0, count: 0 };
             itemMap[nm].qty += qty;
             itemMap[nm].count += 1;
+
+            var nmKey = nm.toLowerCase();
+            var cat = itemCategoryLookup[nmKey] || itemCategoryLookup[nmKey.replace(/\s+/g, ' ')] || 'Uncategorized';
+            if (cat === 'Uncategorized') {
+              if (/electrical|wire|cable|switch|mcb|panel|light|contactor|relay/.test(nmKey)) cat = 'Electrical';
+              else if (/generator|dg|filter|alternator|engine|belt|radiator|starter|battery/.test(nmKey)) cat = 'Generator Parts';
+              else if (/service|maintenance|repair|oil|labour|labor/.test(nmKey)) cat = 'Maintenance';
+              else if (/tool|drill|spanner|wrench|tester|meter/.test(nmKey)) cat = 'Tools';
+            }
+            if (!categoryMap[cat]) categoryMap[cat] = { label: cat, amount: 0, count: 0 };
+            categoryMap[cat].amount += splitAmount;
+            categoryMap[cat].count += 1;
+
+            if (poDate) {
+              if (poDate.getMonth() === curMonth && poDate.getFullYear() === curYear) {
+                currentMonthItemSet[nm] = 1;
+              }
+              if (poDate.getMonth() === prevMonth && poDate.getFullYear() === prevYear) {
+                prevMonthItemSet[nm] = 1;
+              }
+            }
           });
+
+          if (!lineItems.length) {
+            if (!categoryMap.Uncategorized) categoryMap.Uncategorized = { label: 'Uncategorized', amount: 0, count: 0 };
+            categoryMap.Uncategorized.amount += amount;
+            categoryMap.Uncategorized.count += 1;
+          }
         });
+
+        var monthlySeries = Object.keys(monthMap)
+          .sort()
+          .map(function(k) { return monthMap[k]; })
+          .filter(function(m) { return Number(m.amount || 0) > 0; });
+
+        var categorySeries = Object.keys(categoryMap)
+          .map(function(k) { return categoryMap[k]; })
+          .sort(function(a, b) { return b.amount - a.amount; })
+          .slice(0, 6);
 
         var topVendors = Object.keys(vendorMap).map(function(k) { return vendorMap[k]; }).sort(function(a, b) {
           return b.value - a.value;
@@ -428,10 +516,61 @@
           monthAmount: monthAmount,
           lineItemsCount: lineItemsCount,
           activeVendors: Object.keys(vendorMap).length,
+          prevMonthPOs: prevMonthPOs,
+          prevMonthAmount: prevMonthAmount,
+          currentMonthActiveVendors: Object.keys(currentMonthVendorSet).length,
+          prevMonthActiveVendors: Object.keys(prevMonthVendorSet).length,
+          currentMonthItems: Object.keys(currentMonthItemSet).length,
+          prevMonthItems: Object.keys(prevMonthItemSet).length,
           topVendors: topVendors,
           topItems: topItems,
           recent: recent,
-          months: months
+          months: months,
+          monthlySeries: monthlySeries,
+          categorySeries: categorySeries
+        };
+      }
+
+      function buildTrendSeries(summary) {
+        var monthly = (summary.monthlySeries || []).filter(function(m) {
+          return Number(m.amount || 0) > 0;
+        });
+
+        if (monthly.length >= 3) {
+          return {
+            rows: monthly.slice(-6),
+            subtitle: 'Last 6 months with data',
+            unit: 'month'
+          };
+        }
+
+        var yearlyMap = {};
+        (summary.pos || []).forEach(function(po) {
+          var d = parseDateSafe(po.po_date);
+          if (!d) return;
+          var y = String(d.getFullYear());
+          if (!yearlyMap[y]) yearlyMap[y] = { label: y, amount: 0, count: 0 };
+          yearlyMap[y].amount += Number(po.total || 0);
+          yearlyMap[y].count += 1;
+        });
+
+        var yearly = Object.keys(yearlyMap)
+          .sort(function(a, b) { return Number(a) - Number(b); })
+          .map(function(y) { return yearlyMap[y]; })
+          .filter(function(y) { return Number(y.amount || 0) > 0; });
+
+        if (yearly.length) {
+          return {
+            rows: yearly.slice(-6),
+            subtitle: 'Yearly spend',
+            unit: 'year'
+          };
+        }
+
+        return {
+          rows: summary.months || [],
+          subtitle: 'Last 6 months',
+          unit: 'month'
         };
       }
 
@@ -443,6 +582,25 @@
           return;
         }
         el.innerHTML = rows.map(function(r, idx) {
+          if (elId === 'dashboardTopVendors') {
+            var maxValue = rows.reduce(function(mx, row) {
+              return Math.max(mx, Number(row.value || 0));
+            }, 0);
+            var percent = maxValue ? Math.round((Number(r.value || 0) / maxValue) * 100) : 0;
+            return ''
+              + '<div class="insight-row insight-row-vendor">'
+              + '  <div class="insight-left">'
+              + '    <div class="name">' + escHtml(r.name) + '</div>'
+              + '    <div class="meta">POs: ' + (r.count || 0) + '</div>'
+              + '    <div class="vendor-progress" aria-hidden="true"><span style="width:' + percent + '%"></span></div>'
+              + '  </div>'
+              + '  <div class="insight-right">'
+              + '    <div class="name value">' + valueFormatter(r) + '</div>'
+              + '    <div class="meta">Rank #' + (idx + 1) + '</div>'
+              + '  </div>'
+              + '</div>';
+          }
+
           return ''
             + '<div class="insight-row">'
             + '  <div>'
@@ -464,22 +622,66 @@
           showEmptyState('dashboardTrendBars', 'No spend trend available', 'Create your first PO to begin tracking monthly spend.', 'Create PO', "window.location.href='pages/add-po.html'");
           return;
         }
+
+        var trend = buildTrendSeries(summary);
+        var subtitle = document.getElementById('dashboardTrendSubtitle');
+        if (subtitle) subtitle.textContent = trend.subtitle;
+
         var max = 0;
-        summary.months.forEach(function(m) { if (m.amount > max) max = m.amount; });
+        trend.rows.forEach(function(m) { if (m.amount > max) max = m.amount; });
         if (!max) {
           showEmptyState('dashboardTrendBars', 'No spend trend available', 'There are no PO values in the selected months yet.', 'Create PO', "window.location.href='pages/add-po.html'");
           return;
         }
 
-        el.innerHTML = summary.months.map(function(m) {
+        // Keep a stable 6-column chart so sparse datasets never create a single oversized bar.
+        var chartRows = trend.rows.slice(-6);
+        if (chartRows.length < 6) {
+          var fillers = new Array(6 - chartRows.length).fill(0).map(function() {
+            return { label: '', amount: 0, count: 0, _placeholder: true };
+          });
+          chartRows = fillers.concat(chartRows);
+        }
+
+        el.innerHTML = chartRows.map(function(m) {
+          if (m._placeholder) {
+            return ''
+              + '<div class="trend-col trend-col-empty" aria-hidden="true">'
+              + '  <div class="amount">&nbsp;</div>'
+              + '  <div class="bar"></div>'
+              + '  <div class="month">&nbsp;</div>'
+              + '</div>';
+          }
+
           var h = Math.max(8, Math.round((m.amount / max) * 130));
           return ''
-            + '<div class="trend-col">'
+            + '<div class="trend-col trend-col-' + trend.unit + '">'
             + '  <div class="amount">' + toMoney(m.amount) + '</div>'
             + '  <div class="bar" style="height:' + h + 'px"></div>'
-            + '  <div class="month">' + m.label + '</div>'
+            + '  <div class="month" title="' + escHtml(m.label) + '">' + escHtml(m.label) + '</div>'
             + '</div>';
         }).join('');
+      }
+
+      function formatTrendCount(current, previous, suffix) {
+        var delta = Number(current || 0) - Number(previous || 0);
+        var arrow = delta > 0 ? '▲' : (delta < 0 ? '▼' : '■');
+        var cls = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
+        var absDelta = Math.abs(delta);
+        var sign = delta > 0 ? '+' : (delta < 0 ? '-' : '');
+        var text = arrow + ' ' + (delta ? (sign + absDelta) : '0') + ' vs last month';
+        if (suffix) text = arrow + ' ' + (delta ? (sign + absDelta + ' ' + suffix) : ('0 ' + suffix)) + ' vs last month';
+        return { cls: cls, text: text };
+      }
+
+      function formatTrendPercent(current, previous) {
+        var cur = Number(current || 0);
+        var prev = Number(previous || 0);
+        var pct = prev > 0 ? ((cur - prev) / prev) * 100 : (cur > 0 ? 100 : 0);
+        var arrow = pct > 0 ? '▲' : (pct < 0 ? '▼' : '■');
+        var cls = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat');
+        var sign = pct > 0 ? '+' : '';
+        return { cls: cls, text: arrow + ' ' + sign + Math.round(pct) + '% vs last month' };
       }
 
       function renderRecentPOs(summary) {
@@ -516,6 +718,34 @@
         document.getElementById('statVendors').textContent = summary.vendors.length;
         document.getElementById('statItems').textContent = summary.items.length;
         document.getElementById('statPOValue').textContent = toMoney(summary.totalPOValue);
+
+        var poTrend = formatTrendCount(summary.monthPOs, summary.prevMonthPOs, 'POs');
+        var poTrendEl = document.getElementById('statPOsTrend');
+        if (poTrendEl) {
+          poTrendEl.className = 'stat-card-trend ' + poTrend.cls;
+          poTrendEl.textContent = poTrend.text;
+        }
+
+        var vendorTrend = formatTrendCount(summary.currentMonthActiveVendors, summary.prevMonthActiveVendors, 'vendors');
+        var vendorTrendEl = document.getElementById('statVendorsTrend');
+        if (vendorTrendEl) {
+          vendorTrendEl.className = 'stat-card-trend ' + vendorTrend.cls;
+          vendorTrendEl.textContent = vendorTrend.text;
+        }
+
+        var itemsTrend = formatTrendCount(summary.currentMonthItems, summary.prevMonthItems, 'items');
+        var itemsTrendEl = document.getElementById('statItemsTrend');
+        if (itemsTrendEl) {
+          itemsTrendEl.className = 'stat-card-trend ' + itemsTrend.cls;
+          itemsTrendEl.textContent = itemsTrend.text;
+        }
+
+        var valueTrend = formatTrendPercent(summary.monthAmount, summary.prevMonthAmount);
+        var valueTrendEl = document.getElementById('statPOValueTrend');
+        if (valueTrendEl) {
+          valueTrendEl.className = 'stat-card-trend ' + valueTrend.cls;
+          valueTrendEl.textContent = valueTrend.text;
+        }
 
         document.getElementById('kpiAvgPoValue').textContent = toMoney(summary.avgPOValue);
         document.getElementById('kpiAvgPoHint').textContent = summary.pos.length ? ('Based on ' + summary.pos.length + ' POs') : 'No POs yet';
