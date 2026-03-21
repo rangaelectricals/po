@@ -1,3 +1,14 @@
+// --- Utility: Format date as dd/mmm/yyyy (e.g., 21/Mar/2026) ---
+function formatDateDDMMMYYYY(dateInput) {
+    if (!dateInput) return '';
+    let d = (dateInput instanceof Date) ? dateInput : _toDateOnly_(dateInput);
+    if (!d || isNaN(d.getTime())) return '';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(d.getDate()).padStart(2, '0');
+    const mon = months[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day}/${mon}/${year}`;
+}
 // ============================================================
 // main.js - PO Manager - Shared Logic
 // Replace 'YOUR_GOOGLE_SCRIPT_URL' with your deployed Google Apps Script Web App URL
@@ -629,7 +640,7 @@ function buildPODocument(d) {
     doc.text('DATE:', rightBoxX + 4, ry);
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'bold');
-    doc.text(d.po_date || '____', rightBoxX + boxW - 4, ry, { align: 'right' }); ry += 6;
+    doc.text(formatDateDDMMMYYYY(d.po_date) || '____', rightBoxX + boxW - 4, ry, { align: 'right' }); ry += 6;
     doc.setFont(undefined, 'normal'); doc.setFontSize(8);
     doc.setTextColor(0, 0, 0);
     if (d.client_name) {
@@ -642,7 +653,7 @@ function buildPODocument(d) {
     if (d.event_date) {
         doc.text('Event Date:', rightBoxX + 4, ry);
         doc.setFont(undefined, 'bold');
-        doc.text(d.event_date, rightBoxX + 28, ry);
+        doc.text(formatDateDDMMMYYYY(d.event_date), rightBoxX + 28, ry);
         doc.setFont(undefined, 'normal');
         ry += 5;
     }
@@ -2055,7 +2066,7 @@ function _renderPOCardGrid_(pageData, allData, startIdx) {
         var totalNum = _getPOTotal_(po);
         var poNo = escHtml(String(po.po_no || '-'));
         var vendor = escHtml(String(po.vendor_name || '-'));
-        var date = escHtml(String(po.po_date || '-'));
+        var date = escHtml(formatDateDDMMMYYYY(po.po_date) || '-');
         var eventName = escHtml(String(po.event_name || '-'));
         var location = escHtml(String(po.event_location || '-'));
         html += ''
@@ -2251,7 +2262,7 @@ function renderPOList(data) {
         var displayIdx = startIdx + i;
         var idx = allData.indexOf(po);
         var poNo = safeCell(po.po_no, 40);
-        var poDate = safeCell(po.po_date, 24);
+        var poDate = safeCell(formatDateDDMMMYYYY(po.po_date), 24);
         var vendor = safeCell(po.vendor_name, 64);
         var eventName = safeCell(po.event_name, 56);
         var eventLocation = safeCell(po.event_location, 72);
@@ -2641,18 +2652,18 @@ async function _downloadPOExcelStyled_(po, fileName) {
     var thinGray = { style: 'thin', color: { argb: 'FFD1D5DB' } };
     var gridBorder = { top: thinGray, left: thinGray, bottom: thinGray, right: thinGray };
 
-    var rowNo = 1;
-    function add(values) { ws.addRow(values); rowNo++; return rowNo - 1; }
-    function mergeRow(rowIdx) { ws.mergeCells('A' + rowIdx + ':G' + rowIdx); }
-    function styleRangeBorder(fromCell, toCell, border) {
-        var from = ws.getCell(fromCell);
-        var to = ws.getCell(toCell);
-        for (var r = from.row; r <= to.row; r++) {
-            for (var c = from.col; c <= to.col; c++) {
-                ws.getRow(r).getCell(c).border = border;
-            }
-        }
-    }
+    var rows = [[
+        po.po_no || '',
+        formatDateDDMMMYYYY(po.po_date) || '',
+        po.vendor_name || '',
+        po.vendor_address || '',
+        po.vendor_gstin || '',
+        po.client_name || '',
+        po.event_name || '',
+        po.event_location || '',
+        formatDateDDMMMYYYY(po.event_date) || '',
+        _getPOTotal_(po)
+    ]];
 
     // Header block (PDF style)
     var r1 = add(['RANGA ELECTRICALS PVT LTD']); mergeRow(r1);
@@ -3028,12 +3039,12 @@ async function _downloadAllPOsExcelStyled_(list, fileName) {
             ws.getRow(row).values = [
                 i + 1,
                 po.po_no || '',
-                po.po_date || '',
+                formatDateDDMMMYYYY(po.po_date) || '',
                 po.vendor_name || '',
                 po.client_name || '',
                 po.event_name || '',
                 po.event_location || '',
-                po.event_date || '',
+                formatDateDDMMMYYYY(po.event_date) || '',
                 item.desc || '-',
                 qty,
                 item.uom || 'NOS',
@@ -3140,12 +3151,12 @@ function _downloadAllPOsExcelFallback_(list, fileName) {
             rows.push([
                 i + 1,
                 po.po_no || '',
-                po.po_date || '',
+                formatDateDDMMMYYYY(po.po_date) || '',
                 po.vendor_name || '',
                 po.client_name || '',
                 po.event_name || '',
                 po.event_location || '',
-                po.event_date || '',
+                formatDateDDMMMYYYY(po.event_date) || '',
                 item.desc || '-',
                 parseFloat(item.qty) || 0,
                 item.uom || 'NOS',
