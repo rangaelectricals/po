@@ -2610,7 +2610,31 @@ function _downloadBlobFile_(fileName, blob) {
 }
 
 async function _downloadPOExcelStyled_(po, fileName) {
+
     if (typeof ExcelJS === 'undefined') return false;
+
+    // --- Helper row management for worksheet ---
+    var rowNo = 1;
+    function add(arr) {
+        ws.addRow(arr);
+        return rowNo++;
+    }
+    function mergeRow(r) {
+        ws.mergeCells('A' + r + ':G' + r);
+    }
+    // --- Helper: Apply border to a rectangular cell range (ExcelJS) ---
+    function styleRangeBorder(startCell, endCell, borderStyle) {
+        // startCell, endCell: e.g. 'A2', 'D5'
+        var startCol = startCell.charCodeAt(0) - 65 + 1;
+        var startRow = parseInt(startCell.slice(1), 10);
+        var endCol = endCell.charCodeAt(0) - 65 + 1;
+        var endRow = parseInt(endCell.slice(1), 10);
+        for (var r = startRow; r <= endRow; r++) {
+            for (var c = startCol; c <= endCol; c++) {
+                ws.getRow(r).getCell(c).border = borderStyle;
+            }
+        }
+    }
 
     var items = po._items || [];
     var transport = parseFloat(po.transport) || 0;
