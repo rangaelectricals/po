@@ -191,6 +191,28 @@
           </div>
         </div>
       </div>
+
+      <!-- Bulk Actions Toolbar -->
+      <div id="bulkActionsToolbar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-base-100 shadow-2xl rounded-2xl p-4 border border-base-300 hidden transition-all flex items-center gap-4 min-w-[320px] max-w-lg">
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-primary uppercase tracking-wider">Bulk Actions</span>
+          <span id="bulkSelectedCount" class="text-sm font-medium whitespace-nowrap">0 items selected</span>
+        </div>
+        <div class="divider divider-horizontal mx-0"></div>
+        <div class="flex gap-2 flex-grow justify-end">
+          <button class="btn btn-sm btn-error btn-outline gap-1.5" onclick="bulkDownloadPDFs()" title="Download selected as PDFs">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            PDF
+          </button>
+          <button class="btn btn-sm btn-success btn-outline gap-1.5" onclick="bulkDownloadExcel()" title="Export selected to Excel">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Excel
+          </button>
+          <button class="btn btn-sm btn-ghost btn-square" onclick="deselectAllPOs()" title="Cancel selection">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
       <!-- Sidebar -->
       <div class="app-sidebar-shell drawer-side">
         <label for="main-drawer" class="drawer-overlay app-overlay"></label>

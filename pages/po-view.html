@@ -112,7 +112,10 @@
         html += '<a href="po-edit.html?id=' + encodeURIComponent(po.po_no) + '" class="btn btn-warning btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg> Edit</a>';
         html += '<button onclick="downloadPDF()" class="btn btn-error btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> PDF</button>';
         html += '<button onclick="downloadExcel()" class="btn btn-success btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Excel</button>';
-        html += '<button onclick="window.print()" class="btn btn-ghost btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg> Print</button>';
+        html += '<button onclick="window.print()" class="btn btn-neutral btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg> Print</button>';
+        if (isAdmin()) {
+          html += '<button onclick="viewActionDelete()" class="btn btn-error btn-outline btn-sm gap-1 justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> Delete</button>';
+        }
         html += '<label class="col-span-2 sm:col-auto flex items-center justify-center sm:justify-start gap-1.5 sm:ml-2 cursor-pointer select-none"><input type="checkbox" id="includeSignToggle" class="checkbox checkbox-xs checkbox-primary" checked><span class="text-xs font-medium">Include Seal</span></label>';
         html += '</div>';
 
@@ -401,6 +404,34 @@
           return;
         }
         showToast('Excel export is not available on this page.', 'error');
+      }
+
+      function viewActionDelete() {
+        if (!currentPO) return;
+        if (!isAdmin()) {
+          showToast('Only admins can delete POs.', 'error');
+          return;
+        }
+        if (!confirm('Are you sure you want to delete this PO?')) return;
+        
+        var pwd = prompt('Enter Admin Password to DELETE:');
+        if (pwd === null) return;
+        if (pwd !== 'Ranga@7677') {
+          showToast('Incorrect password!', 'error');
+          return;
+        }
+
+        showToast('Deleting...', 'info');
+        gsPost({ action: 'delete', po_no: currentPO.po_no, po_id: currentPO.po_id })
+        .then(function(resp) {
+            if (resp.success) {
+                showToast('PO deleted.', 'success');
+                invalidateCache('read');
+                setTimeout(() => { window.location.href = 'po-list.html'; }, 800);
+            } else {
+                showToast('Failed: ' + resp.error, 'error');
+            }
+        });
       }
 
       window.onload = function() {

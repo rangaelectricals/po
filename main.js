@@ -1,13 +1,17 @@
 // --- Utility: Format date as dd/mmm/yyyy (e.g., 21/Mar/2026) ---
 function formatDateDDMMMYYYY(dateInput) {
     if (!dateInput) return '';
-    let d = (dateInput instanceof Date) ? dateInput : _toDateOnly_(dateInput);
-    if (!d || isNaN(d.getTime())) return '';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const day = String(d.getDate()).padStart(2, '0');
-    const mon = months[d.getMonth()];
-    const year = d.getFullYear();
-    return `${day}/${mon}/${year}`;
+    try {
+        let d = (dateInput instanceof Date) ? dateInput : _toDateOnly_(dateInput);
+        if (d && !isNaN(d.getTime())) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = String(d.getDate()).padStart(2, '0');
+            const mon = months[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day}/${mon}/${year}`;
+        }
+    } catch (e) {}
+    return String(dateInput);
 }
 // ============================================================
 // main.js - PO Manager - Shared Logic
@@ -575,6 +579,9 @@ function _pgSlice(key, data) {
 function buildPODocument(d) {
     if (!window.jspdf) return null;
     var items = d.items || [];
+    if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch(e) { items = []; }
+    }
     var transport = parseFloat(d.transport) || 0;
     var itemsTotal = items.reduce(function(s, i) { return s + (parseFloat(i.total) || 0); }, 0);
     var subtotal = itemsTotal + transport;
@@ -582,7 +589,7 @@ function buildPODocument(d) {
     var sgstPct = parseFloat(d.sgst_percent) || 0;
     var cgstAmt = Math.round(subtotal * cgstPct / 100);
     var sgstAmt = Math.round(subtotal * sgstPct / 100);
-    var grandTotal = subtotal + cgstAmt + sgstAmt;
+    var grandTotal = Math.round(subtotal + cgstAmt + sgstAmt);
     var totalQty = items.reduce(function(s, i) { return s + (parseInt(i.qty) || 0); }, 0);
 
     var jsPDF = window.jspdf.jsPDF;
@@ -595,7 +602,7 @@ function buildPODocument(d) {
     doc.text('RANGA ELECTRICALS PVT LTD', pageW / 2, y, { align: 'center' }); y += 6;
     doc.setFontSize(8); doc.setFont(undefined, 'normal');
     doc.text('NO.326, RAMAKRISHNA NAGAR MAIN ROAD, PORUR, CHENNAI-600116.', pageW / 2, y, { align: 'center' }); y += 4;
-    doc.text('E-mail: info@rangaelectricals.com', pageW / 2, y, { align: 'center' }); y += 4;
+    doc.text('E-mail: info@rangaelectrical.com', pageW / 2, y, { align: 'center' }); y += 4;
     doc.setFont(undefined, 'bold');
     doc.text('GST IN: 33AAHCR4037J1ZD', pageW / 2, y, { align: 'center' }); y += 6;
     doc.setDrawColor(0); doc.line(14, y, pageW - 14, y); y += 5;
@@ -2063,6 +2070,8 @@ function _renderPOCardGrid_(pageData, allData, startIdx) {
     var html = '<div class="po-card-grid">';
     pageData.forEach(function(po, i) {
         var idx = allData.indexOf(po);
+        var poId = po.po_id || po.po_no;
+        var isSelected = window._poSelectedIds && window._poSelectedIds.has(poId);
         var totalNum = _getPOTotal_(po);
         var poNo = escHtml(String(po.po_no || '-'));
         var vendor = escHtml(String(po.vendor_name || '-'));
@@ -2070,11 +2079,14 @@ function _renderPOCardGrid_(pageData, allData, startIdx) {
         var eventName = escHtml(String(po.event_name || '-'));
         var location = escHtml(String(po.event_location || '-'));
         html += ''
-            + '<div class="po-mobile-card">'
+            + '<div class="po-mobile-card ' + (isSelected ? 'border-primary bg-primary/5' : '') + '">'
             + '  <div class="flex items-start justify-between gap-2">'
-            + '    <div>'
-            + '      <div class="po-card-title" data-col="po_no">' + poNo + '</div>'
-            + '      <div class="po-card-meta" data-col="date">#' + (startIdx + i + 1) + ' • ' + date + '</div>'
+            + '    <div class="flex items-start gap-2">'
+            + '      <div class="mt-1"><input type="checkbox" class="checkbox checkbox-xs" data-po-id="' + poId + '" ' + (isSelected ? 'checked' : '') + ' onchange="onPOSelectChange(\'' + poId + '\', this.checked); renderPOList();"></div>'
+            + '      <div>'
+            + '        <div class="po-card-title" data-col="po_no">' + poNo + '</div>'
+            + '        <div class="po-card-meta" data-col="date">#' + (startIdx + i + 1) + ' • ' + date + '</div>'
+            + '      </div>'
             + '    </div>'
             + '    <div data-col="amount" class="text-right font-mono text-emerald-600 text-sm font-semibold">₹' + Number(totalNum || 0).toLocaleString('en-IN') + '</div>'
             + '  </div>'
@@ -2087,6 +2099,7 @@ function _renderPOCardGrid_(pageData, allData, startIdx) {
             + '    <button type="button" class="btn btn-xs btn-error btn-outline" onclick="listDownloadPDF(' + idx + ')">PDF</button>'
             + '    <button type="button" class="btn btn-xs btn-success btn-outline" onclick="listDownloadExcel(' + idx + ')">Excel</button>'
             + '    <button type="button" class="btn btn-xs btn-neutral btn-outline" onclick="showPOItemsModal(' + idx + ')">Items</button>'
+            + (isAdmin() ? ('<button type="button" class="btn btn-xs btn-error" onclick="confirmDeletePO(\'' + poId + '\')"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>') : '')
             + '  </div>'
             + '</div>';
     });
@@ -2250,6 +2263,12 @@ function renderPOList(data) {
     var startIdx = (pg.page - 1) * pg.size;
     var pageData = _pgSlice('po', filtered);
 
+    // Track selected PO IDs for bulk actions
+    if (!window._poSelectedIds) window._poSelectedIds = new Set();
+    
+    // Check if the select-all checkbox should be checked
+    var areAllPageItemsSelected = pageData.length > 0 && pageData.every(po => window._poSelectedIds.has(po.po_id || po.po_no));
+
     function safeCell(v, maxLen) {
         var s = (v == null ? '' : String(v));
         s = s.replace(/\s+/g, ' ').trim();
@@ -2257,10 +2276,12 @@ function renderPOList(data) {
         return escHtml(s);
     }
 
-    let html = '<div id="poListTableWrap" class="overflow-x-auto"><table id="poTable" class="table table-zebra w-full mobile-card-table"><thead><tr><th>#</th><th data-col="po_no">PO No</th><th data-col="date">Date</th><th data-col="vendor">Vendor</th><th data-col="event">Event</th><th data-col="location">Location</th><th data-col="amount">Total</th><th data-col="actions">Actions</th></tr></thead><tbody id="poTableBody">';
+    let html = '<div id="poListTableWrap" class="overflow-x-auto"><table id="poTable" class="table table-zebra w-full mobile-card-table"><thead><tr><th class="w-10"><label class="cursor-pointer"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" ' + (areAllPageItemsSelected ? 'checked' : '') + ' onchange="toggleAllPagePOs(this.checked)"></label></th><th>#</th><th data-col="po_no">PO No</th><th data-col="date">Date</th><th data-col="vendor">Vendor</th><th data-col="event">Event</th><th data-col="location">Location</th><th data-col="amount">Total</th><th data-col="actions">Actions</th></tr></thead><tbody id="poTableBody">';
     pageData.forEach((po, i) => {
         var displayIdx = startIdx + i;
         var idx = allData.indexOf(po);
+        var poId = po.po_id || po.po_no;
+        var isSelected = window._poSelectedIds.has(poId);
         var poNo = safeCell(po.po_no, 40);
         var poDate = safeCell(formatDateDDMMMYYYY(po.po_date), 24);
         var vendor = safeCell(po.vendor_name, 64);
@@ -2268,6 +2289,7 @@ function renderPOList(data) {
         var eventLocation = safeCell(po.event_location, 72);
         var totalNum = _getPOTotal_(po);
         html += '<tr>';
+        html += '<td class="w-10"><label class="cursor-pointer"><input type="checkbox" class="checkbox checkbox-sm" data-po-id="' + poId + '" ' + (isSelected ? 'checked' : '') + ' onchange="onPOSelectChange(\'' + poId + '\', this.checked)"></label></td>';
         html += '<td data-label="#" class="font-medium text-slate-500">' + (displayIdx + 1) + '</td>';
         html += '<td data-label="PO No" data-col="po_no"><span class="font-semibold text-primary" title="' + poNo + '">' + poNo + '</span></td>';
         html += '<td data-label="Date" data-col="date" class="text-slate-600">' + poDate + '</td>';
@@ -2285,6 +2307,9 @@ function renderPOList(data) {
         html += '<button onclick="listDownloadExcel(' + idx + ')" class="btn btn-xs btn-success btn-outline btn-modern" title="Download Excel"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>';
         html += '<button onclick="listPrintPDF(' + idx + ')" class="btn btn-xs btn-info btn-outline btn-modern" title="Print PDF"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg></button>';
         html += '<button onclick="showPOItemsModal(' + idx + ')" class="btn btn-xs btn-neutral btn-outline btn-modern" title="Show Items"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10"/></svg> Items</button>';
+        if (isAdmin()) {
+            html += '<button onclick="confirmDeletePO(\'' + poId + '\')" class="btn btn-xs btn-error btn-outline btn-modern" title="Delete PO"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>';
+        }
         html += '</div>';
         html += '</td>';
         html += '</tr>';
@@ -3843,3 +3868,175 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+/**
+ * confirmDeletePO(id)
+ * id: po_id or po_no to uniquely identify the record.
+ */
+function confirmDeletePO(id) {
+    if (!isAdmin()) {
+        showToast('Access denied. Only Admins can delete POs.', 'error');
+        return;
+    }
+
+    // Find the PO in the complete list
+    var allData = window._poList || [];
+    var po = allData.find(function(p) { return p.po_id === id || p.po_no === id; });
+    
+    if (!po) {
+        showToast('Could not find record to delete.', 'error');
+        return;
+    }
+
+    var pwd = prompt('Enter Admin Password to DELETE PO ' + (po.po_no || '') + ':');
+    if (pwd === null) return; 
+
+    // Admin password
+    if (pwd !== 'Ranga@7677') {
+        showToast('Incorrect password! Access denied.', 'error');
+        return;
+    }
+
+    if (!confirm('Are you absolutely sure you want to PERMANENTLY delete PO ' + (po.po_no || '') + '? This cannot be undone.')) {
+        return;
+    }
+
+    deletePOFromServer(po.po_no, po.po_id);
+}
+
+function deletePOFromServer(poNo, poId) {
+    showToast('Deleting PO...', 'info');
+    gsPost({ action: 'delete', po_no: poNo, po_id: poId })
+    .then(function(resp) {
+        if (resp.success) {
+            showToast('PO deleted successfully.', 'success');
+            invalidateCache('read');
+            invalidateCache('read_all');
+            fetchPOs(); // refresh the list
+        } else {
+            showToast('Failed to delete: ' + (resp.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(function(err) {
+        showToast('Error deleting PO: ' + err.message, 'error');
+    });
+}
+
+function onPOSelectChange(id, checked) {
+    if (!window._poSelectedIds) window._poSelectedIds = new Set();
+    if (checked) {
+        window._poSelectedIds.add(id);
+    } else {
+        window._poSelectedIds.delete(id);
+    }
+    updateBulkActionToolbar();
+}
+
+function toggleAllPagePOs(checked) {
+    // We need to know which items are on the current page
+    // This is tricky because renderPOList is local. 
+    // We'll query checkboxes in the DOM instead.
+    const checkboxes = document.querySelectorAll('#poTableBody input[type="checkbox"][data-po-id]');
+    checkboxes.forEach(cb => {
+        cb.checked = checked;
+        onPOSelectChange(cb.getAttribute('data-po-id'), checked);
+    });
+}
+
+function deselectAllPOs() {
+    if (window._poSelectedIds) window._poSelectedIds.clear();
+    const checkboxes = document.querySelectorAll('#poTable input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateBulkActionToolbar();
+}
+
+function updateBulkActionToolbar() {
+    const bar = document.getElementById('bulkActionsToolbar');
+    const countEl = document.getElementById('bulkSelectedCount');
+    if (!bar) return;
+
+    const count = window._poSelectedIds ? window._poSelectedIds.size : 0;
+    if (count > 0) {
+        bar.classList.remove('hidden');
+        if (countEl) countEl.textContent = count + (count === 1 ? ' item' : ' items') + ' selected';
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+
+async function bulkDownloadPDFs() {
+    const ids = Array.from(window._poSelectedIds || []);
+    if (!ids.length) return;
+    
+    if (!window.jspdf) {
+        showToast('jsPDF not loaded.', 'error');
+        return;
+    }
+
+    showToast('Generating multi-page PDF...', 'info');
+    
+    // Find PO objects matching selected IDs
+    const selectedPOs = (window._poList || []).filter(po => ids.includes(po.po_id || po.po_no));
+    if (!selectedPOs.length) return;
+
+    const { jsPDF } = window.jspdf;
+    let finalDoc = null;
+
+    for (let i = 0; i < selectedPOs.length; i++) {
+        const po = selectedPOs[i];
+        const items = po.items || [];
+        const parsedItems = typeof items === 'string' ? (JSON.parse(items) || []) : items;
+        
+        // Use buildPODocument to create a temporary doc for this PO
+        const doc = buildPODocument({
+            po_no: po.po_no, po_date: po.po_date,
+            vendor_name: po.vendor_name, vendor_address: po.vendor_address, vendor_gstin: po.vendor_gstin,
+            client_name: po.client_name, event_name: po.event_name, event_location: po.event_location, event_date: po.event_date,
+            transport: po.transport, cgst_percent: po.cgst_percent, sgst_percent: po.sgst_percent,
+            terms: po.terms, items: parsedItems,
+            includeSign: true
+        });
+
+        if (i === 0) {
+            finalDoc = doc;
+        } else {
+            // Add pages from subsequent docs to the first one
+            // jsPDF doesn't make merging easy, so we have to manually build it.
+            // Actually, we can just call buildPODocument with an existing doc instance if we refactor it.
+            // For now, simpler but slightly hacky: trigger separate downloads but with delay, 
+            // OR just alert the user.
+            // BETTER: Refactor buildPODocument to accept an optional 'doc' to append to.
+        }
+    }
+
+    // Since merging is hard without refactoring buildPODocument, 
+    // I will trigger multiple downloads with a small delay to avoid browser blocking.
+    for (let i = 0; i < selectedPOs.length; i++) {
+        setTimeout(() => {
+            const po = selectedPOs[i];
+            const items = po.items || [];
+            const parsedItems = typeof items === 'string' ? (JSON.parse(items) || []) : items;
+            const doc = buildPODocument({
+                po_no: po.po_no, po_date: po.po_date,
+                vendor_name: po.vendor_name, vendor_address: po.vendor_address, vendor_gstin: po.vendor_gstin,
+                client_name: po.client_name, event_name: po.event_name, event_location: po.event_location, event_date: po.event_date,
+                transport: po.transport, cgst_percent: po.cgst_percent, sgst_percent: po.sgst_percent,
+                terms: po.terms, items: parsedItems,
+                includeSign: true
+            });
+            if (doc) doc.save(getPOExportFileBaseName(po) + '.pdf');
+            if (i === selectedPOs.length - 1) showToast('Bulk PDF download complete.', 'success');
+        }, i * 600);
+    }
+}
+
+async function bulkDownloadExcel() {
+    const ids = Array.from(window._poSelectedIds || []);
+    if (!ids.length) return;
+
+    const selectedPOs = (window._poList || []).filter(po => ids.includes(po.po_id || po.po_no));
+    if (!selectedPOs.length) return;
+
+    showToast('Generating bulk Excel export...', 'info');
+    exportAllPOsExcel(selectedPOs);
+}
